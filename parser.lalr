@@ -1,0 +1,132 @@
+%{
+
+#include "parser.h"
+
+ParseResult Parser::parse (TokenArray & tok_arr)
+{
+    void * semantics = NULL;
+
+#   define LALR2C_R_TOKEN_TYPE             tok_arr.start[tok_arr.index].type
+#   define LALR2C_R_TOKEN_SEMANTICS        tok_arr.start[tok_arr.index].value
+
+#   define LALR2C_RW_STACK_STATE(n)        (stack_top - n)->state
+#   define LALR2C_RW_STACK_SEMANTICS(n)    (stack_top - n)->semantics
+
+#   define LALR2C_E_SHIFT_TOKEN()          do { ++ tok_arr.index; } while (0)
+#   define LALR2C_E_RESERVE_STACK()        do { ++ stack_top; } while (0)
+#   define LALR2C_E_POP_STACK(n)           do { stack_top -= n; } while (0)
+
+#   define LALR2C_RW_TMP_SEMANTICS         semantics
+
+#   define LALR2C_RW_IS_1ST_CALL           is_start
+
+%}
+
+%token       ALT
+%token       ASSERT_START
+%token       ASSERT_END
+%token       ESC_WORD_LOWER
+%token       ESC_WORD_UPPER
+%token       LBRACE_ASSERT_YES
+%token       LBRACE_ASSERT_NO
+%token       LBRACE_LAZY
+%token       LBRACE
+%token       RBRACE
+%token       ZERO_ONE
+%token       ZERO_MANY
+%token       ONE_MANY
+%token       DOT
+%token       ESC_CONLROL
+%token       ESC_INTEGER
+%token       ESC_CLASS
+%token       ESC_CONTROL_LETTER
+%token       ESC_HEX
+%token       ESC_UNICODE
+%token       ESC_IDENTITY
+%token       CHAR
+%token       COUNTED_REPEAT
+%token       CLASS
+
+%fail        { return false; }
+
+%start       pattern
+%stop        LAMBDA
+
+%%
+
+atom
+: CHAR
+| DOT
+| ESC_CONLROL
+| ESC_INTEGER
+| ESC_CLASS
+| ESC_CONTROL_LETTER
+| ESC_HEX
+| ESC_UNICODE
+| ESC_IDENTITY
+| CLASS
+| LBRACE disjunction RBRACE
+| LBRACE_LAZY disjunction RBRACE
+;
+
+quantifier_prefix
+: ZERO_MANY
+| ONE_MANY
+| ZERO_ONE
+| COUNTED_REPEAT
+;
+
+quantifier
+: quantifier_prefix
+| quantifier_prefix ZERO_ONE
+;
+
+assertion
+: ASSERT_START
+| ASSERT_END
+| ESC_WORD_LOWER
+| ESC_WORD_UPPER
+| LBRACE_ASSERT_YES disjunction RBRACE
+| LBRACE_ASSERT_NO disjunction RBRACE
+;
+
+term
+: assertion
+| atom
+| atom quantifier
+;
+
+alternative
+: 
+| alternative term
+;
+
+disjunction
+: alternative
+| alternative ALT disjunction
+;
+
+pattern : disjunction;
+
+
+%{
+
+    return PARSE_OK;
+
+#   undef LALR2C_R_TOKEN_TYPE
+#   undef LALR2C_R_TOKEN_SEMANTICS
+
+#   undef LALR2C_RW_STACK_STATE
+#   undef LALR2C_RW_STACK_SEMANTICS
+
+#   undef LALR2C_E_SHIFT_TOKEN
+#   undef LALR2C_E_RESERVE_STACK
+#   undef LALR2C_E_POP_STACK
+
+#   undef LALR2C_RW_TMP_SEMANTICS
+
+#   undef LALR2C_RW_IS_1ST_CALL
+
+}
+
+%}
