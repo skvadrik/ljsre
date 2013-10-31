@@ -1,8 +1,10 @@
 
 
+#include <stddef.h> // NULL
+
 #include "parser.h"
 
-ParseResult Parser::parse (TokenArray & tok_arr)
+bool Parser::parse (TokenArray & tok_arr)
 {
     void * semantics = NULL;
 
@@ -1462,7 +1464,7 @@ ParseResult Parser::parse (TokenArray & tok_arr)
 
 
 
-    return PARSE_OK;
+    return true;
 
 #   undef LALR2C_R_TOKEN_TYPE
 #   undef LALR2C_R_TOKEN_SEMANTICS

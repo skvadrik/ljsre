@@ -15,8 +15,6 @@ class Parser
     StackType * const stack;
     StackType * stack_top;
 
-    bool is_start; // is "true" until parse executed
-
     Parser (const Parser &);              /* forbid copy */
     Parser & operator = (const Parser &); /* forbid copy */
 
@@ -24,7 +22,6 @@ class Parser
     Parser ()
         : stack      (static_cast<StackType *> (operator new (STACK_SIZE * sizeof (StackType))))
         , stack_top  (stack)
-        , is_start   (true)
     { }
 
     ~Parser ()

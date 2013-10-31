@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 
 #include "lex.h"
 #include "parser.h"
