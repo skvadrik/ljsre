@@ -177,7 +177,7 @@ lex_main:
         }
         [^]
         {
-            const char c = * token;
+            const unsigned char c = * token;
             if (c >= 0x7F)
             {
                 if (YYCURSOR >= limit)
