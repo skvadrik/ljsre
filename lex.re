@@ -49,13 +49,13 @@ lex_main:
     */
 
     /*!re2c
-        "|"       { save_token (tok_arr, T_ALT,                NULL); goto lex_main; }
-        "?"       { save_token (tok_arr, T_ZERO_ONE,           NULL); goto lex_main; }
-        "*"       { save_token (tok_arr, T_ZERO_MANY,          NULL); goto lex_main; }
-        "+"       { save_token (tok_arr, T_ONE_MANY,           NULL); goto lex_main; }
-        "("       { save_token (tok_arr, T_CAPTURE_START,      NULL); goto lex_main; }
-        "(?:"     { save_token (tok_arr, T_CAPTURE_START_LAZY, NULL); goto lex_main; }
-        ")"       { save_token (tok_arr, T_CAPTURE_END,        NULL); goto lex_main; }
+        "|"       { save_token (tok_arr, T_ALT,            NULL); goto lex_main; }
+        "?"       { save_token (tok_arr, T_ZERO_ONE,       NULL); goto lex_main; }
+        "*"       { save_token (tok_arr, T_ZERO_MANY,      NULL); goto lex_main; }
+        "+"       { save_token (tok_arr, T_ONE_MANY,       NULL); goto lex_main; }
+        "("       { save_token (tok_arr, T_LBRACE_CAPTURE, NULL); goto lex_main; }
+        "(?:"     { save_token (tok_arr, T_LBRACE_LAZY,    NULL); goto lex_main; }
+        ")"       { save_token (tok_arr, T_RBRACE,         NULL); goto lex_main; }
         "{"       { goto lex_times_from; }
 
         "^"
@@ -86,8 +86,8 @@ lex_main:
             save_token (tok_arr, T_ASSERT, p);
             goto lex_main;
         }
-        "(?="    { save_token (tok_arr, T_ASSERT_FOLLOW,     NULL); goto lex_main; }
-        "(?!"    { save_token (tok_arr, T_ASSERT_FOLLOW_NOT, NULL); goto lex_main; }
+        "(?="    { save_token (tok_arr, T_LBRACE_FOLLOW,     NULL); goto lex_main; }
+        "(?!"    { save_token (tok_arr, T_LBRACE_FOLLOW_NOT, NULL); goto lex_main; }
 
         "["
         {
@@ -242,6 +242,7 @@ lex_class:
     /*!re2c
         "]"
         {
+            save_token (tok_arr, T_CLASS_END, NULL);
             goto lex_main;
         }
         "-"

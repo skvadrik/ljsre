@@ -3,6 +3,7 @@
 #include <stddef.h> // NULL
 
 #include "ast.h"
+#include "debug_parser.h"
 #include "parser.h"
 
 bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
@@ -30,9 +31,6 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
 %token    T_ASSERT_FOLLOW
 %token    T_ASSERT_FOLLOW_NOT
 %token    T_BACKREF
-%token    T_CAPTURE_END
-%token    T_CAPTURE_START
-%token    T_CAPTURE_START_LAZY
 %token    T_CLASS
 %token    T_CLASS_END
 %token    T_CLASS_START
@@ -41,7 +39,9 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
 %token    T_COUNTED_REPEAT
 %token    T_DASH
 %token    T_DOT
-%token    T_LBRACE
+%token    T_LBRACE_CAPTURE
+%token    T_LBRACE_FOLLOW
+%token    T_LBRACE_FOLLOW_NOT
 %token    T_LBRACE_LAZY
 %token    T_ONE_MANY
 %token    T_RBRACE
@@ -109,7 +109,7 @@ atom
 | T_DOT    /* empty */
 | class    /* empty */
 | T_CLASS    /* empty */
-| T_LBRACE disjunction T_RBRACE {
+| T_LBRACE_CAPTURE disjunction T_RBRACE {
     $$ = allocator.allocate_type<RECapture> ();
     new ($$) RECapture ($2, true);
 }
@@ -121,11 +121,11 @@ atom
 
 assertion
 : T_ASSERT    /* empty */
-| T_ASSERT_FOLLOW disjunction T_RBRACE {
+| T_LBRACE_FOLLOW disjunction T_RBRACE {
     $$ = allocator.allocate_type<REAssertFollow> ();
     new ($$) REAssertFollow ($2, false);
 }
-| T_ASSERT_FOLLOW_NOT disjunction T_RBRACE {
+| T_LBRACE_FOLLOW_NOT disjunction T_RBRACE {
     $$ = allocator.allocate_type<REAssertFollow> ();
     new ($$) REAssertFollow ($2, true);
 }
@@ -133,6 +133,7 @@ assertion
 
 term
 : assertion    /* empty */
+| atom    /* empty */
 
 /* "e*|e*?" */
 | atom T_ZERO_MANY {

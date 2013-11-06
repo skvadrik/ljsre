@@ -20,7 +20,7 @@ int main (int argc, char ** argv)
     }
 
     tok_arr.index = 0;
-    switch (!parser.parse (tok_arr, allocator))
+    if (!parser.parse (tok_arr, allocator))
     {
         printf ("syntax error (parse)\n");
         return 3;
