@@ -1,6 +1,7 @@
 #ifndef __LJS_PARSER__
 #define __LJS_PARSER__
 
+#include "slab_allocator.hh"
 #include "token_array.h"
 
 struct StackType
@@ -29,7 +30,7 @@ class Parser
         operator delete (stack);
     }
 
-    bool parse (TokenArray & tok_arr);
+    bool parse (TokenArray & tok_arr, slab_allocator<> & allocator);
 };
 
 #endif // __LJS_PARSER__

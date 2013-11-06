@@ -2,9 +2,10 @@
 
 #include <stddef.h> // NULL
 
+#include "ast.h"
 #include "parser.h"
 
-bool Parser::parse (TokenArray & tok_arr)
+bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
 {
     void * semantics = NULL;
 
@@ -24,88 +25,170 @@ bool Parser::parse (TokenArray & tok_arr)
 
 %}
 
-%token       ALT
-%token       ASSERT_START
-%token       ASSERT_END
-%token       ESC_WORD_LOWER
-%token       ESC_WORD_UPPER
-%token       LBRACE_ASSERT_YES
-%token       LBRACE_ASSERT_NO
-%token       LBRACE_LAZY
-%token       LBRACE
-%token       RBRACE
-%token       ZERO_ONE
-%token       ZERO_MANY
-%token       ONE_MANY
-%token       DOT
-%token       ESC_CONLROL
-%token       ESC_INTEGER
-%token       ESC_CLASS
-%token       ESC_CONTROL_LETTER
-%token       ESC_HEX
-%token       ESC_UNICODE
-%token       ESC_IDENTITY
-%token       CHAR
-%token       COUNTED_REPEAT
-%token       CLASS
+%token    T_ALT
+%token    T_ASSERT
+%token    T_ASSERT_FOLLOW
+%token    T_ASSERT_FOLLOW_NOT
+%token    T_BACKREF
+%token    T_CAPTURE_END
+%token    T_CAPTURE_START
+%token    T_CAPTURE_START_LAZY
+%token    T_CLASS
+%token    T_CLASS_END
+%token    T_CLASS_START
+%token    T_CLASS_START_NEG
+%token    T_COUNTED_REPEAT
+%token    T_DASH
+%token    T_DOT
+%token    T_LBRACE
+%token    T_LBRACE_LAZY
+%token    T_ONE_MANY
+%token    T_RBRACE
+%token    T_RUNE
+%token    T_TIMES
+%token    T_TIMES_FROM
+%token    T_TIMES_FROM_TO
+%token    T_ZERO_MANY
+%token    T_ZERO_ONE
 
 %fail        { return false; }
 
 %start       pattern
-%stop        LAMBDA
+%stop        T_LAMBDA
 
 %%
 
+class_ranges
+:
+| class_ranges T_RUNE
+| class_ranges T_CLASS
+| class_ranges T_RUNE T_DASH T_RUNE
+;
+
+class
+: T_CLASS_START        class_ranges        T_CLASS_END
+| T_CLASS_START T_DASH class_ranges        T_CLASS_END
+| T_CLASS_START        class_ranges T_DASH T_CLASS_END
+| T_CLASS_START T_DASH class_ranges T_DASH T_CLASS_END
+;
+
 atom
-: CHAR
-| DOT
-| ESC_CONLROL
-| ESC_INTEGER
-| ESC_CLASS
-| ESC_CONTROL_LETTER
-| ESC_HEX
-| ESC_UNICODE
-| ESC_IDENTITY
-| CLASS
-| LBRACE disjunction RBRACE
-| LBRACE_LAZY disjunction RBRACE
-;
-
-quantifier_prefix
-: ZERO_MANY
-| ONE_MANY
-| ZERO_ONE
-| COUNTED_REPEAT
-;
-
-quantifier
-: quantifier_prefix
-| quantifier_prefix ZERO_ONE
+: T_RUNE    /* empty */
+| T_BACKREF    /* empty */
+| T_DOT    /* empty */
+| class    /* empty */
+| T_CLASS    /* empty */
+| T_LBRACE disjunction T_RBRACE {
+    $$ = allocator.allocate_type<RECapture> ();
+    new ($$) RECapture ($2, true);
+}
+| T_LBRACE_LAZY disjunction T_RBRACE {
+    $$ = allocator.allocate_type<RECapture> ();
+    new ($$) RECapture ($2, false);
+}
 ;
 
 assertion
-: ASSERT_START
-| ASSERT_END
-| ESC_WORD_LOWER
-| ESC_WORD_UPPER
-| LBRACE_ASSERT_YES disjunction RBRACE
-| LBRACE_ASSERT_NO disjunction RBRACE
+: T_ASSERT    /* empty */
+| T_ASSERT_FOLLOW disjunction T_RBRACE {
+    $$ = allocator.allocate_type<REAssertFollow> ();
+    new ($$) REAssertFollow ($2, false);
+}
+| T_ASSERT_FOLLOW_NOT disjunction T_RBRACE {
+    $$ = allocator.allocate_type<REAssertFollow> ();
+    new ($$) REAssertFollow ($2, true);
+}
 ;
 
 term
-: assertion
-| atom
-| atom quantifier
+: assertion    /* empty */
+
+/* "e*|e*?" */
+| atom T_ZERO_MANY {
+    $$ = allocator.allocate_type<REZeroMany> ();
+    new ($$) REZeroMany ($1, true);
+}
+| atom T_ZERO_MANY T_ZERO_ONE {
+    $$ = allocator.allocate_type<REZeroMany> ();
+    new ($$) REZeroMany ($1, false);
+}
+
+/* "e+"/"e+?" */
+| atom T_ONE_MANY {
+    $$ = allocator.allocate_type<REOneMany> ();
+    new ($$) REOneMany ($1, true);
+}
+| atom T_ONE_MANY T_ZERO_ONE {
+    $$ = allocator.allocate_type<REOneMany> ();
+    new ($$) REOneMany ($1, false);
+}
+
+/* "e?"/"e??" */
+| atom T_ZERO_ONE {
+    $$ = allocator.allocate_type<REZeroOne> ();
+    new ($$) REZeroOne ($1, true);
+}
+| atom T_ZERO_ONE T_ZERO_ONE {
+    $$ = allocator.allocate_type<REZeroOne> ();
+    new ($$) REZeroOne ($1, false);
+}
+
+/* "e{n}"/"e{n}?" */
+| atom T_TIMES {
+    $$ = allocator.allocate_type<RETimes> ();
+    new ($$) RETimes ($1, * (static_cast<unsigned int *> ($2)), true);
+}
+| atom T_TIMES T_ZERO_ONE {
+    $$ = allocator.allocate_type<RETimes> ();
+    new ($$) RETimes ($1, * (static_cast<unsigned int *> ($2)), false);
+}
+
+/* "e{n,}"/"e{n,}?" */
+| atom T_TIMES_FROM {
+    $$ = allocator.allocate_type<RETimesFrom> ();
+    new ($$) RETimesFrom ($1, * (static_cast<unsigned int *> ($2)), true);
+}
+| atom T_TIMES_FROM T_ZERO_ONE {
+    $$ = allocator.allocate_type<RETimesFrom> ();
+    new ($$) RETimesFrom ($1, * (static_cast<unsigned int *> ($2)), false);
+}
+
+/* "e{n,m}"/"e{n,m}?" */
+| atom T_TIMES_FROM_TO {
+    $$ = allocator.allocate_type<RETimesFromTo> ();
+    unsigned int * p = static_cast<unsigned int *> ($2);
+    new ($$) RETimesFromTo ($1, p[0], p[1], true);
+}
+| atom T_TIMES_FROM_TO T_ZERO_ONE {
+    $$ = allocator.allocate_type<RETimesFromTo> ();
+    unsigned int * p = static_cast<unsigned int *> ($2);
+    new ($$) RETimesFromTo ($1, p[0], p[1], false);
+}
 ;
 
 alternative
-: 
-| alternative term
+: term    /* empty */
+| alternative term {
+    $$ = allocator.allocate_type<RECat> ();
+    new ($$) RECat ($1, $2);
+}
 ;
 
 disjunction
-: alternative
-| alternative ALT disjunction
+: /* empty */ {
+    $$ = allocator.allocate_type<REEmpty> ();
+    new ($$) REEmpty ();
+}
+| alternative    /* empty */
+| alternative T_ALT disjunction {
+    $$ = allocator.allocate_type<REAlt> ();
+    new ($$) REAlt ($1, $3);
+}
+| T_ALT disjunction {
+    REEmpty * p = allocator.allocate_type<REEmpty> ();
+    new (p) REEmpty ();
+    $$ = allocator.allocate_type<REAlt> (); new ($$) REAlt (p, $2);
+}
 ;
 
 pattern : disjunction;
