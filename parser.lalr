@@ -36,6 +36,7 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
 %token    T_CLASS
 %token    T_CLASS_END
 %token    T_CLASS_START
+%token    T_CLASS_UNBOXED
 %token    T_CLASS_START_NEG
 %token    T_COUNTED_REPEAT
 %token    T_DASH
@@ -45,6 +46,7 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
 %token    T_ONE_MANY
 %token    T_RBRACE
 %token    T_RUNE
+%token    T_RUNE_UNBOXED
 %token    T_TIMES
 %token    T_TIMES_FROM
 %token    T_TIMES_FROM_TO
@@ -59,17 +61,46 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
 %%
 
 class_ranges
-:
-| class_ranges T_RUNE
-| class_ranges T_CLASS
-| class_ranges T_RUNE T_DASH T_RUNE
+: {
+    $$ = allocator.allocate_type<array<Rune, slab_allocator<> > > ();
+    new ($$) array<Rune, slab_allocator<> > (allocator);
+}
+| class_ranges T_RUNE_UNBOXED {
+    const Rune r = * static_cast<Rune *> ($2);
+    static_cast<array<Rune, slab_allocator<> > *> ($1)->push_back (r);
+}
+| class_ranges T_CLASS_UNBOXED {
+    const array<Rune, slab_allocator<> > & range = * static_cast<const array<Rune, slab_allocator<> > *> ($2);
+    for (unsigned int i = 0; i < range.size (); ++i)
+        static_cast<array<Rune, slab_allocator<> > *> ($1)->push_back (range[i]);
+}
+| class_ranges T_RUNE_UNBOXED T_DASH T_RUNE_UNBOXED {
+    const Rune r1 = * static_cast<Rune *> ($2);
+    const Rune r2 = * static_cast<Rune *> ($4);
+    const Rune r = r2 << 16 | r1;
+    static_cast<array<Rune, slab_allocator<> > *> ($1)->push_back (r);
+}
 ;
 
 class
-: T_CLASS_START        class_ranges        T_CLASS_END
-| T_CLASS_START T_DASH class_ranges        T_CLASS_END
-| T_CLASS_START        class_ranges T_DASH T_CLASS_END
-| T_CLASS_START T_DASH class_ranges T_DASH T_CLASS_END
+: T_CLASS_START class_ranges T_CLASS_END {
+    static_cast<REClass *> ($1)->runes = static_cast<array<Rune, slab_allocator<> > *> ($2);
+}
+| T_CLASS_START T_DASH class_ranges T_CLASS_END {
+    const Rune r = '-';
+    static_cast<array<Rune, slab_allocator<> > *> ($3)->push_back (r);
+    static_cast<REClass *> ($1)->runes = static_cast<array<Rune, slab_allocator<> > *> ($3);
+}
+| T_CLASS_START class_ranges T_DASH T_CLASS_END {
+    const Rune r = '-';
+    static_cast<array<Rune, slab_allocator<> > *> ($2)->push_back (r);
+    static_cast<REClass *> ($1)->runes = static_cast<array<Rune, slab_allocator<> > *> ($2);
+}
+| T_CLASS_START T_DASH class_ranges T_DASH T_CLASS_END {
+    const Rune r = '-';
+    static_cast<array<Rune, slab_allocator<> > *> ($3)->push_back (r);
+    static_cast<REClass *> ($1)->runes = static_cast<array<Rune, slab_allocator<> > *> ($3);
+}
 ;
 
 atom

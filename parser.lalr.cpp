@@ -228,10 +228,10 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
         {
             case T_DASH:
                 goto lalr2c_state_20;
-            case T_CLASS:
             case T_CLASS_END:
-            case T_RUNE:
-                goto lalr2c_reduce_2;
+            case T_CLASS_UNBOXED:
+            case T_RUNE_UNBOXED:
+                goto lalr2c_reduce_1;
             default:
                 { return false; }
         }
@@ -476,11 +476,11 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
         LALR2C_E_RESERVE_STACK ();
         switch (LALR2C_R_TOKEN_TYPE)
         {
-            case T_CLASS:
             case T_CLASS_END:
+            case T_CLASS_UNBOXED:
             case T_DASH:
-            case T_RUNE:
-                goto lalr2c_reduce_2;
+            case T_RUNE_UNBOXED:
+                goto lalr2c_reduce_1;
             default:
                 { return false; }
         }
@@ -489,13 +489,13 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
         LALR2C_E_RESERVE_STACK ();
         switch (LALR2C_R_TOKEN_TYPE)
         {
-            case T_RUNE:
+            case T_RUNE_UNBOXED:
                 goto lalr2c_state_47;
             case T_DASH:
                 goto lalr2c_state_46;
-            case T_CLASS_END:
+            case T_CLASS_UNBOXED:
                 goto lalr2c_state_45;
-            case T_CLASS:
+            case T_CLASS_END:
                 goto lalr2c_state_44;
             default:
                 { return false; }
@@ -793,14 +793,14 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
         LALR2C_E_RESERVE_STACK ();
         switch (LALR2C_R_TOKEN_TYPE)
         {
-            case T_RUNE:
+            case T_RUNE_UNBOXED:
                 goto lalr2c_state_47;
             case T_CLASS_END:
                 goto lalr2c_state_51;
+            case T_CLASS_UNBOXED:
+                goto lalr2c_state_45;
             case T_DASH:
                 goto lalr2c_state_52;
-            case T_CLASS:
-                goto lalr2c_state_44;
             default:
                 { return false; }
         }
@@ -959,11 +959,14 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
         LALR2C_E_RESERVE_STACK ();
         switch (LALR2C_R_TOKEN_TYPE)
         {
-            case T_CLASS:
-            case T_CLASS_END:
-            case T_DASH:
-            case T_RUNE:
-                goto lalr2c_reduce_3;
+            case T_ONE_MANY:
+            case T_TIMES:
+            case T_TIMES_FROM:
+            case T_TIMES_FROM_TO:
+            case T_ZERO_MANY:
+            case T_ZERO_ONE:
+            case T_LAMBDA:
+                goto lalr2c_reduce_8;
             default:
                 { return false; }
         }
@@ -974,14 +977,11 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
         LALR2C_E_RESERVE_STACK ();
         switch (LALR2C_R_TOKEN_TYPE)
         {
-            case T_ONE_MANY:
-            case T_TIMES:
-            case T_TIMES_FROM:
-            case T_TIMES_FROM_TO:
-            case T_ZERO_MANY:
-            case T_ZERO_ONE:
-            case T_LAMBDA:
-                goto lalr2c_reduce_8;
+            case T_CLASS_END:
+            case T_CLASS_UNBOXED:
+            case T_DASH:
+            case T_RUNE_UNBOXED:
+                goto lalr2c_reduce_4;
             default:
                 { return false; }
         }
@@ -1004,12 +1004,12 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
         LALR2C_E_RESERVE_STACK ();
         switch (LALR2C_R_TOKEN_TYPE)
         {
-            case T_CLASS:
-            case T_CLASS_END:
-            case T_RUNE:
-                goto lalr2c_reduce_4;
             case T_DASH:
                 goto lalr2c_state_53;
+            case T_CLASS_END:
+            case T_CLASS_UNBOXED:
+            case T_RUNE_UNBOXED:
+                goto lalr2c_reduce_3;
             default:
                 { return false; }
         }
@@ -1115,7 +1115,7 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
         LALR2C_E_RESERVE_STACK ();
         switch (LALR2C_R_TOKEN_TYPE)
         {
-            case T_RUNE:
+            case T_RUNE_UNBOXED:
                 goto lalr2c_state_55;
             default:
                 { return false; }
@@ -1145,11 +1145,11 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
         LALR2C_E_RESERVE_STACK ();
         switch (LALR2C_R_TOKEN_TYPE)
         {
-            case T_CLASS:
             case T_CLASS_END:
+            case T_CLASS_UNBOXED:
             case T_DASH:
-            case T_RUNE:
-                goto lalr2c_reduce_1;
+            case T_RUNE_UNBOXED:
+                goto lalr2c_reduce_2;
             default:
                 { return false; }
         }
@@ -1366,28 +1366,73 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
         LALR2C_E_POP_STACK (1);
         goto lalr2c_nonterminal_Natom;
     lalr2c_reduce_8:
+        {
+    static_cast<REClass *> (LALR2C_RW_STACK_SEMANTICS (3))->runes = static_cast<array<Rune, slab_allocator<> > *> (LALR2C_RW_STACK_SEMANTICS (2));
+}
         LALR2C_E_POP_STACK (3);
+        LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Nclass;
     lalr2c_reduce_7:
+        {
+    const Rune r = '-';
+    static_cast<array<Rune, slab_allocator<> > *> (LALR2C_RW_STACK_SEMANTICS (3))->push_back (r);
+    static_cast<REClass *> (LALR2C_RW_STACK_SEMANTICS (5))->runes = static_cast<array<Rune, slab_allocator<> > *> (LALR2C_RW_STACK_SEMANTICS (3));
+}
         LALR2C_E_POP_STACK (5);
+        LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Nclass;
     lalr2c_reduce_6:
+        {
+    const Rune r = '-';
+    static_cast<array<Rune, slab_allocator<> > *> (LALR2C_RW_STACK_SEMANTICS (3))->push_back (r);
+    static_cast<REClass *> (LALR2C_RW_STACK_SEMANTICS (4))->runes = static_cast<array<Rune, slab_allocator<> > *> (LALR2C_RW_STACK_SEMANTICS (3));
+}
         LALR2C_E_POP_STACK (4);
+        LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Nclass;
     lalr2c_reduce_5:
+        {
+    const Rune r = '-';
+    static_cast<array<Rune, slab_allocator<> > *> (LALR2C_RW_STACK_SEMANTICS (2))->push_back (r);
+    static_cast<REClass *> (LALR2C_RW_STACK_SEMANTICS (4))->runes = static_cast<array<Rune, slab_allocator<> > *> (LALR2C_RW_STACK_SEMANTICS (2));
+}
         LALR2C_E_POP_STACK (4);
+        LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Nclass;
     lalr2c_reduce_4:
+        {
+    const array<Rune, slab_allocator<> > & range = * static_cast<const array<Rune, slab_allocator<> > *> (LALR2C_RW_STACK_SEMANTICS (1));
+    for (unsigned int i = 0; i < range.size (); ++i)
+        static_cast<array<Rune, slab_allocator<> > *> (LALR2C_RW_STACK_SEMANTICS (2))->push_back (range[i]);
+}
         LALR2C_E_POP_STACK (2);
+        LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Nclass_ranges;
     lalr2c_reduce_3:
+        {
+    const Rune r = * static_cast<Rune *> (LALR2C_RW_STACK_SEMANTICS (1));
+    static_cast<array<Rune, slab_allocator<> > *> (LALR2C_RW_STACK_SEMANTICS (2))->push_back (r);
+}
         LALR2C_E_POP_STACK (2);
+        LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Nclass_ranges;
     lalr2c_reduce_2:
-        LALR2C_E_POP_STACK (0);
+        {
+    const Rune r1 = * static_cast<Rune *> (LALR2C_RW_STACK_SEMANTICS (3));
+    const Rune r2 = * static_cast<Rune *> (LALR2C_RW_STACK_SEMANTICS (1));
+    const Rune r = r2 << 16 | r1;
+    static_cast<array<Rune, slab_allocator<> > *> (LALR2C_RW_STACK_SEMANTICS (4))->push_back (r);
+}
+        LALR2C_E_POP_STACK (4);
+        LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Nclass_ranges;
     lalr2c_reduce_1:
-        LALR2C_E_POP_STACK (4);
+        {
+    LALR2C_RW_TMP_SEMANTICS = allocator.allocate_type<array<Rune, slab_allocator<> > > ();
+    new (LALR2C_RW_TMP_SEMANTICS) array<Rune, slab_allocator<> > (allocator);
+}
+        LALR2C_E_POP_STACK (0);
+        LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Nclass_ranges;
     
     lalr2c_nonterminal_Nalternative:
