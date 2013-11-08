@@ -3,11 +3,12 @@
 
 #include "slab_allocator.hh"
 #include "token_array.h"
+#include "re_array.h"
 
 struct StackType
 {
     unsigned int state;
-    void * semantics;
+    TokenValue semantics;
 };
 
 class Parser
@@ -30,7 +31,7 @@ class Parser
         operator delete (stack);
     }
 
-    bool parse (TokenArray & tok_arr, slab_allocator<> & allocator);
+    RE * parse (TokenArray & tok_arr, REArray & re_arr, slab_allocator<> & allocator);
 };
 
 #endif // __LJS_PARSER__

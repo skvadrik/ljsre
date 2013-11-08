@@ -2,6 +2,8 @@
 #define __LJS_TOKEN__
 
 #include "token_type.h"
+#include "re.h"
+#include "rune.h"
 
 __attribute__((unused)) static const char * token_typenames [] =
 {
@@ -18,13 +20,22 @@ enum TokenType
     TOKEN_NUMBER
 };
 
-// Token is a pair: token = (token_id, token_value)
-// For simple tokens, token_value is NULL
-// For complex tokens, token_value is a pointer to object.
+union TokenValue
+{
+    RE *         re;
+    unsigned int number;
+    Rune         rune;
+    RuneVector * rune_vector;
+
+    TokenValue ()
+        : re (NULL)
+    { }
+};
+
 struct Token
 {
     TokenType type;
-    void * value;
+    TokenValue value;
 };
 
 #endif // __LJS_TOKEN__

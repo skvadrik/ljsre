@@ -1,34 +1,44 @@
 #ifndef __LJS_TOKEN_ARRAY__
 #define __LJS_TOKEN_ARRAY__
 
+#include "array.h"
 #include "token.h"
 
-struct TokenArray
+typedef array<Token> TokenArray;
+
+static inline void savetoken (TokenArray & tok_arr, TokenType t)
 {
-    const unsigned int SIZE;
-    Token * start;
-    unsigned int index;
+    tok_arr.start[tok_arr.index].type = t;
+    ++ tok_arr.index;
+}
 
-    TokenArray (unsigned int sz)
-        : SIZE  (sz)
-        , start (static_cast<Token *> (operator new (SIZE * sizeof (Token))))
-        , index (0)
-    { }
+static inline void savetoken_re (TokenArray & tok_arr, TokenType t, RE * re)
+{
+    tok_arr.start[tok_arr.index].type = t;
+    tok_arr.start[tok_arr.index].value.re = re;
+    ++ tok_arr.index;
+}
 
-    ~TokenArray ()
-    {
-        operator delete (start);
-    }
+static inline void savetoken_number (TokenArray & tok_arr, unsigned int n)
+{
+    tok_arr.start[tok_arr.index].type = T_NUMBER;
+    tok_arr.start[tok_arr.index].value.number = n;
+    ++ tok_arr.index;
+}
 
-    inline void clear ()
-    {
-        index = 0;
-    }
+static inline void savetoken_rune (TokenArray & tok_arr, Rune r)
+{
+    tok_arr.start[tok_arr.index].type = T_RUNE_UNBOXED;
+    tok_arr.start[tok_arr.index].value.rune = r;
+    ++ tok_arr.index;
+}
 
-  private:
-    TokenArray (const TokenArray &);              /* forbid copy */
-    TokenArray & operator = (const TokenArray &); /* forbid copy */
-};
+static inline void savetoken_rune_vector (TokenArray & tok_arr, RuneVector * rs)
+{
+    tok_arr.start[tok_arr.index].type = T_CLASS_UNBOXED;
+    tok_arr.start[tok_arr.index].value.rune_vector = rs;
+    ++ tok_arr.index;
+}
 
 #endif // __LJS_TOKEN_ARRAY__
 

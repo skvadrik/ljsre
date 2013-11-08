@@ -1,20 +1,17 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "ast.h"
+#include "re.h"
 #include "lex.h"
 #include "rune.h"
-#include "token_array.h"
 
-static inline void save_token (TokenArray & tok_arr, TokenType t, void * v)
-{
-    printf ("LEXER: %s - %u\n", token_typenames[t], tok_arr.index);
-    tok_arr.start[tok_arr.index].type  = t;
-    tok_arr.start[tok_arr.index].value = v;
-    ++ tok_arr.index;
-}
-
-bool lex (const char * pattern, unsigned int pattern_len, TokenArray & tok_arr, slab_allocator<> & allocator)
+bool lex
+    ( const char * pattern
+    , unsigned int pattern_len
+    , TokenArray & tok_arr
+    , REArray & re_arr
+    , slab_allocator<> & allocator
+    )
 {
     /*!max:re2c */
     char * const buffer = new char [pattern_len + YYMAXFILL];
@@ -27,9 +24,6 @@ bool lex (const char * pattern, unsigned int pattern_len, TokenArray & tok_arr, 
     char * YYCURSOR = buffer;
     char * YYMARKER = buffer;
     char * token    = buffer;
-
-    unsigned int times_from = 0;
-    unsigned int times_to   = 0;
 
 lex_main:
     token    = YYCURSOR;
@@ -49,130 +43,121 @@ lex_main:
     */
 
     /*!re2c
-        "|"       { save_token (tok_arr, T_ALT,            NULL); goto lex_main; }
-        "?"       { save_token (tok_arr, T_ZERO_ONE,       NULL); goto lex_main; }
-        "*"       { save_token (tok_arr, T_ZERO_MANY,      NULL); goto lex_main; }
-        "+"       { save_token (tok_arr, T_ONE_MANY,       NULL); goto lex_main; }
-        "("       { save_token (tok_arr, T_LBRACE_CAPTURE, NULL); goto lex_main; }
-        "(?:"     { save_token (tok_arr, T_LBRACE_LAZY,    NULL); goto lex_main; }
-        ")"       { save_token (tok_arr, T_RBRACE,         NULL); goto lex_main; }
-        "{"       { goto lex_times_from; }
+        "|"       { savetoken (tok_arr, T_ALT);            goto lex_main; }
+        "?"       { savetoken (tok_arr, T_ZERO_ONE);       goto lex_main; }
+        "*"       { savetoken (tok_arr, T_ZERO_MANY);      goto lex_main; }
+        "+"       { savetoken (tok_arr, T_ONE_MANY);       goto lex_main; }
+        "("       { savetoken (tok_arr, T_LBRACE_CAPTURE); goto lex_main; }
+        "(?:"     { savetoken (tok_arr, T_LBRACE_LAZY);    goto lex_main; }
+        ")"       { savetoken (tok_arr, T_RBRACE);         goto lex_main; }
+        "{"       { goto lex_times; }
 
         "^"
         {
-            REAssertStart * p = allocator.allocate_type<REAssertStart> ();
-            new (p) REAssertStart ();
-            save_token (tok_arr, T_ASSERT, p);
+            RE * re = savere_assert_start (re_arr);
+            savetoken_re (tok_arr, T_ASSERT, re);
             goto lex_main;
         }
         "$"
         {
-            REAssertEnd * p = allocator.allocate_type<REAssertEnd> ();
-            new (p) REAssertEnd ();
-            save_token (tok_arr, T_ASSERT, p);
+            RE * re = savere_assert_end (re_arr);
+            savetoken_re (tok_arr, T_ASSERT, re);
             goto lex_main;
         }
         "\\b"
         {
-            REAssertWord * p = allocator.allocate_type<REAssertWord> ();
-            new (p) REAssertWord (false);
-            save_token (tok_arr, T_ASSERT, p);
+            RE * re = savere_assert_word (re_arr);
+            savetoken_re (tok_arr, T_ASSERT, re);
             goto lex_main;
         }
         "\\B"
         {
-            REAssertWord * p = allocator.allocate_type<REAssertWord> ();
-            new (p) REAssertWord (true);
-            save_token (tok_arr, T_ASSERT, p);
+            RE * re = savere_assert_word_not (re_arr);
+            savetoken_re (tok_arr, T_ASSERT, re);
             goto lex_main;
         }
-        "(?="    { save_token (tok_arr, T_LBRACE_FOLLOW,     NULL); goto lex_main; }
-        "(?!"    { save_token (tok_arr, T_LBRACE_FOLLOW_NOT, NULL); goto lex_main; }
+        "(?="
+        {
+            savetoken (tok_arr, T_LBRACE_FOLLOW);
+            goto lex_main;
+        }
+        "(?!"
+        {
+            savetoken (tok_arr, T_LBRACE_FOLLOW_NOT);
+            goto lex_main;
+        }
 
         "["
         {
-            REClass * p = allocator.allocate_type<REClass> ();
-            new (p) REClass (false, NULL);
-            save_token (tok_arr, T_CLASS_START, p);
+            savetoken (tok_arr, T_CLASS_START);
             goto lex_class;
         }
         "[^"
         {
-            REClass * p = allocator.allocate_type<REClass> ();
-            new (p) REClass (true, NULL);
-            save_token (tok_arr, T_CLASS_START, p);
+            savetoken (tok_arr, T_CLASS_START_NEG);
             goto lex_class;
         }
         "."
         {
-            REDot * p = allocator.allocate_type<REDot> ();
-            new (p) REDot ();
-            save_token (tok_arr, T_DOT, p);
+            RE * p = savere_dot (re_arr);
+            savetoken_re (tok_arr, T_DOT, p);
             goto lex_main;
         }
         esc_decimal
         {
             const unsigned int n = (unsigned int) atoi (token);
-            REBackref * p = allocator.allocate_type<REBackref> ();
-            new (p) REBackref (n);
-            save_token (tok_arr, T_BACKREF, p);
+            RE * p = savere_backref (re_arr, n);
+            savetoken_re (tok_arr, T_BACKREF, p);
             goto lex_main;
         }
         esc_class
         {
-            array<Rune, slab_allocator<> > * rc = allocator.allocate_type<array<Rune, slab_allocator<> > > ();
-            const bool is_negative = to_rune_class (token, * rc);
-            REClass * p = allocator.allocate_type<REClass> ();
-            new (p) REClass (is_negative, rc);
-            save_token (tok_arr, T_CLASS, p);
+            RuneVector * rs = allocator.allocate_type<RuneVector> ();
+            to_rune_class (token, * rs);
+            RE * p = savere_rune_class (re_arr, rs);
+            savetoken_re (tok_arr, T_CLASS, p);
             goto lex_main;
         }
         esc_null
         {
             const Rune r = '\0';
-            RERune * p = allocator.allocate_type<RERune> ();
-            new (p) RERune (r);
-            save_token (tok_arr, T_RUNE, p);
+            RE * p = savere_rune (re_arr, r);
+            savetoken_re (tok_arr, T_RUNE, p);
             goto lex_main;
         }
         esc_control
         {
             const Rune r = control_to_rune (token + 1);
-            RERune * p = allocator.allocate_type<RERune> ();
-            new (p) RERune (r);
-            save_token (tok_arr, T_RUNE, p);
+            RE * p = savere_rune (re_arr, r);
+            savetoken_re (tok_arr, T_RUNE, p);
             goto lex_main;
         }
         esc_control_letter
         {
             const Rune r = control_letter_to_rune (token + 1);
-            RERune * p = allocator.allocate_type<RERune> ();
-            new (p) RERune (r);
-            save_token (tok_arr, T_RUNE, p);
+            RE * p = savere_rune (re_arr, r);
+            savetoken_re (tok_arr, T_RUNE, p);
             goto lex_main;
         }
         esc_hex
         {
             const Rune r = hex_to_rune (token + 1);
-            RERune * p = allocator.allocate_type<RERune> ();
-            new (p) RERune (r);
-            save_token (tok_arr, T_RUNE, p);
+            RE * p = savere_rune (re_arr, r);
+            savetoken_re (tok_arr, T_RUNE, p);
             goto lex_main;
         }
         esc_unicode
         {
             const Rune r = unicode_to_rune (token + 1);
-            RERune * p = allocator.allocate_type<RERune> ();
-            new (p) RERune (r);
-            save_token (tok_arr, T_RUNE, p);
+            RE * p = savere_rune (re_arr, r);
+            savetoken_re (tok_arr, T_RUNE, p);
             goto lex_main;
         }
         esc_identity
         {
             const Rune r = identity_to_rune (token + 1);
-            RERune * p = allocator.allocate_type<RERune> ();
-            new (p) RERune (r);
-            save_token (tok_arr, T_RUNE, p);
+            RE * p = savere_rune (re_arr, r);
+            savetoken_re (tok_arr, T_RUNE, p);
             goto lex_main;
         }
         [^]
@@ -182,7 +167,7 @@ lex_main:
             {
                 if (YYCURSOR >= limit)
                 {
-                    save_token (tok_arr, T_LAMBDA, NULL);
+                    savetoken (tok_arr, T_LAMBDA);
                     goto success;
                 }
                 else
@@ -191,46 +176,39 @@ lex_main:
             else
             {
                 const Rune r = c;
-                RERune * p = allocator.allocate_type<RERune> ();
-                new (p) RERune (r);
-                save_token (tok_arr, T_RUNE, p);
+                RE * p = savere_rune (re_arr, r);
+                savetoken_re (tok_arr, T_RUNE, p);
                 goto lex_main;
             }
         }
     */
 
-lex_times_from:
+lex_times:
     /*!re2c
         [1-9][0-9]* | "0"
         {
-            times_from = atoi (token);
-            goto lex_times_to;
+            const unsigned int n = atoi (token);
+            savetoken_number (tok_arr, n);
+            goto lex_times_upper;
         }
         [^] { goto failure; }
     */
-lex_times_to:
+lex_times_upper:
     /*!re2c
         "}"
         {
-            int * p = allocator.allocate_type<int> ();
-            * p = times_from;
-            save_token (tok_arr, T_TIMES, p);
             goto lex_main;
         }
         ",}"
         {
-            int * p = allocator.allocate_type<int> ();
-            * p = times_from;
-            save_token (tok_arr, T_TIMES_FROM, p);
+            savetoken (tok_arr, T_COMMA);
             goto lex_main;
         }
         "," ([1-9][0-9]* | "0") "}"
         {
-            times_to = atoi (token + 1);
-            int * p = allocator.allocate_type_array<int> (2);
-            p[0] = times_from;
-            p[1] = times_to;
-            save_token (tok_arr, T_TIMES_FROM_TO, p);
+            savetoken (tok_arr, T_COMMA);
+            const unsigned int n = atoi (token + 1);
+            savetoken_number (tok_arr, n);
             goto lex_main;
         }
         [^] { goto failure; }
@@ -242,75 +220,67 @@ lex_class:
     /*!re2c
         "]"
         {
-            save_token (tok_arr, T_CLASS_END, NULL);
+            savetoken (tok_arr, T_CLASS_END);
             goto lex_main;
         }
         "-"
         {
-            save_token (tok_arr, T_DASH, NULL);
+            savetoken (tok_arr, T_DASH);
             goto lex_class;
         }
         esc_class
         {
-            array<Rune, slab_allocator<> > * rc = allocator.allocate_type<array<Rune, slab_allocator<> > > ();
-            to_rune_class (token, * rc);
-            save_token (tok_arr, T_CLASS_UNBOXED, rc);
+            RuneVector * rs = allocator.allocate_type<RuneVector> ();
+            to_rune_class (token, * rs);
+            savetoken_rune_vector (tok_arr, rs);
             goto lex_class;
         }
         "\\b"
         {
-            Rune * p = allocator.allocate_type<Rune> ();
-            * p = '\b';
-            save_token (tok_arr, T_RUNE_UNBOXED, p);
+            const Rune r = '\b';
+            savetoken_rune (tok_arr, r);
             goto lex_class;
         }
         esc_null
         {
-            Rune * p = allocator.allocate_type<Rune> ();
-            * p = '\0';
-            save_token (tok_arr, T_RUNE_UNBOXED, p);
+            const Rune r = '\0';
+            savetoken_rune (tok_arr, r);
             goto lex_class;
         }
         esc_control
         {
-            Rune * p = allocator.allocate_type<Rune> ();
-            * p = control_to_rune (token + 1);
-            save_token (tok_arr, T_RUNE_UNBOXED, p);
+            const Rune r = control_to_rune (token + 1);
+            savetoken_rune (tok_arr, r);
             goto lex_class;
         }
         esc_control_letter
         {
-            Rune * p = allocator.allocate_type<Rune> ();
-            * p = control_letter_to_rune (token + 1);
-            save_token (tok_arr, T_RUNE_UNBOXED, p);
+            const Rune r = control_letter_to_rune (token + 1);
+            savetoken_rune (tok_arr, r);
             goto lex_class;
         }
         esc_hex
         {
-            Rune * p = allocator.allocate_type<Rune> ();
-            * p = hex_to_rune (token + 1);
-            save_token (tok_arr, T_RUNE_UNBOXED, p);
+            const Rune r = hex_to_rune (token + 1);
+            savetoken_rune (tok_arr, r);
             goto lex_class;
         }
         esc_unicode
         {
-            Rune * p = allocator.allocate_type<Rune> ();
-            * p = unicode_to_rune (token + 1);
-            save_token (tok_arr, T_RUNE_UNBOXED, p);
+            const Rune r = unicode_to_rune (token + 1);
+            savetoken_rune (tok_arr, r);
             goto lex_class;
         }
         esc_identity
         {
-            Rune * p = allocator.allocate_type<Rune> ();
-            * p = identity_to_rune (token + 1);
-            save_token (tok_arr, T_RUNE_UNBOXED, p);
+            const Rune r = identity_to_rune (token + 1);
+            savetoken_rune (tok_arr, r);
             goto lex_class;
         }
         [^\x5C\x5D\x2D]
         {
-            Rune * p = allocator.allocate_type<Rune> ();
-            * p = * token;
-            save_token (tok_arr, T_RUNE_UNBOXED, p);
+            const Rune r = * token;
+            savetoken_rune (tok_arr, r);
             goto lex_class;
         }
         [^]

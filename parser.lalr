@@ -2,13 +2,12 @@
 
 #include <stddef.h> // NULL
 
-#include "ast.h"
 #include "debug_parser.h"
 #include "parser.h"
 
-bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
+RE * Parser::parse (TokenArray & tok_arr, REArray & re_arr, slab_allocator<> & allocator)
 {
-    void * semantics = NULL;
+    TokenValue semantics;
 
 #   define LALR2C_R_TOKEN_TYPE             tok_arr.start[tok_arr.index].type
 #   define LALR2C_R_TOKEN_SEMANTICS        tok_arr.start[tok_arr.index].value
@@ -34,15 +33,16 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
 %token    T_CLASS
 %token    T_CLASS_END
 %token    T_CLASS_START
-%token    T_CLASS_UNBOXED
 %token    T_CLASS_START_NEG
-%token    T_COUNTED_REPEAT
+%token    T_CLASS_UNBOXED
+%token    T_COMMA
 %token    T_DASH
 %token    T_DOT
 %token    T_LBRACE_CAPTURE
 %token    T_LBRACE_FOLLOW
 %token    T_LBRACE_FOLLOW_NOT
 %token    T_LBRACE_LAZY
+%token    T_NUMBER
 %token    T_ONE_MANY
 %token    T_RBRACE
 %token    T_RUNE
@@ -53,7 +53,7 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
 %token    T_ZERO_MANY
 %token    T_ZERO_ONE
 
-%fail        { return false; }
+%fail        { return NULL; }
 
 %start       pattern
 %stop        T_LAMBDA
@@ -62,44 +62,52 @@ bool Parser::parse (TokenArray & tok_arr, slab_allocator<> & allocator)
 
 class_ranges
 : {
-    $$ = allocator.allocate_type<array<Rune, slab_allocator<> > > ();
-    new ($$) array<Rune, slab_allocator<> > (allocator);
+    $$.rune_vector = allocator.allocate_type<RuneVector> ();
+    new ($$.rune_vector) RuneVector (allocator);
 }
 | class_ranges T_RUNE_UNBOXED {
-    const Rune r = * static_cast<Rune *> ($2);
-    static_cast<array<Rune, slab_allocator<> > *> ($1)->push_back (r);
+    $1.rune_vector->push_back ($2.rune);
+    $$ = $1;
 }
 | class_ranges T_CLASS_UNBOXED {
-    const array<Rune, slab_allocator<> > & range = * static_cast<const array<Rune, slab_allocator<> > *> ($2);
-    for (unsigned int i = 0; i < range.size (); ++i)
-        static_cast<array<Rune, slab_allocator<> > *> ($1)->push_back (range[i]);
+    for (unsigned int i = 0; i < $2.rune_vector->size (); ++i)
+        $1.rune_vector->push_back ((* $2.rune_vector)[i]);
+    $$ = $1;
 }
 | class_ranges T_RUNE_UNBOXED T_DASH T_RUNE_UNBOXED {
-    const Rune r1 = * static_cast<Rune *> ($2);
-    const Rune r2 = * static_cast<Rune *> ($4);
+    const Rune r1 = $2.rune;
+    const Rune r2 = $4.rune;
     const Rune r = r2 << 16 | r1;
-    static_cast<array<Rune, slab_allocator<> > *> ($1)->push_back (r);
+    $1.rune_vector->push_back (r);
+    $$ = $1;
+}
+;
+
+class_body
+: class_ranges    /* empty */
+| class_ranges T_DASH {
+    const Rune r = '-';
+    $1.rune_vector->push_back (r);
+    $$ = $1;
+}
+| T_DASH class_ranges {
+    const Rune r = '-';
+    $1.rune_vector->push_back (r);
+    $$ = $1;
+}
+| T_DASH class_ranges T_DASH {
+    const Rune r = '-';
+    $1.rune_vector->push_back (r);
+    $$ = $1;
 }
 ;
 
 class
-: T_CLASS_START class_ranges T_CLASS_END {
-    static_cast<REClass *> ($1)->runes = static_cast<array<Rune, slab_allocator<> > *> ($2);
+: T_CLASS_START class_body T_CLASS_END {
+    $$.re = savere_rune_class (re_arr, $2.rune_vector);
 }
-| T_CLASS_START T_DASH class_ranges T_CLASS_END {
-    const Rune r = '-';
-    static_cast<array<Rune, slab_allocator<> > *> ($3)->push_back (r);
-    static_cast<REClass *> ($1)->runes = static_cast<array<Rune, slab_allocator<> > *> ($3);
-}
-| T_CLASS_START class_ranges T_DASH T_CLASS_END {
-    const Rune r = '-';
-    static_cast<array<Rune, slab_allocator<> > *> ($2)->push_back (r);
-    static_cast<REClass *> ($1)->runes = static_cast<array<Rune, slab_allocator<> > *> ($2);
-}
-| T_CLASS_START T_DASH class_ranges T_DASH T_CLASS_END {
-    const Rune r = '-';
-    static_cast<array<Rune, slab_allocator<> > *> ($3)->push_back (r);
-    static_cast<REClass *> ($1)->runes = static_cast<array<Rune, slab_allocator<> > *> ($3);
+| T_CLASS_START_NEG class_body T_CLASS_END {
+    $$.re = savere_rune_class_neg (re_arr, $2.rune_vector);
 }
 ;
 
@@ -110,24 +118,20 @@ atom
 | class    /* empty */
 | T_CLASS    /* empty */
 | T_LBRACE_CAPTURE disjunction T_RBRACE {
-    $$ = allocator.allocate_type<RECapture> ();
-    new ($$) RECapture ($2, true);
+    $$.re = savere_capture (re_arr, $2.re);
 }
 | T_LBRACE_LAZY disjunction T_RBRACE {
-    $$ = allocator.allocate_type<RECapture> ();
-    new ($$) RECapture ($2, false);
+    $$ = $2;
 }
 ;
 
 assertion
 : T_ASSERT    /* empty */
 | T_LBRACE_FOLLOW disjunction T_RBRACE {
-    $$ = allocator.allocate_type<REAssertFollow> ();
-    new ($$) REAssertFollow ($2, false);
+    $$.re = savere_assert_follow (re_arr, $2.re);
 }
 | T_LBRACE_FOLLOW_NOT disjunction T_RBRACE {
-    $$ = allocator.allocate_type<REAssertFollow> ();
-    new ($$) REAssertFollow ($2, true);
+    $$.re = savere_assert_follow_not (re_arr, $2.re);
 }
 ;
 
@@ -137,98 +141,83 @@ term
 
 /* "e*|e*?" */
 | atom T_ZERO_MANY {
-    $$ = allocator.allocate_type<REZeroMany> ();
-    new ($$) REZeroMany ($1, true);
+    $$.re = savere_zero_many (re_arr, $1.re);
 }
 | atom T_ZERO_MANY T_ZERO_ONE {
-    $$ = allocator.allocate_type<REZeroMany> ();
-    new ($$) REZeroMany ($1, false);
+    $$.re = savere_zero_many_lazy (re_arr, $1.re);
 }
 
 /* "e+"/"e+?" */
 | atom T_ONE_MANY {
-    $$ = allocator.allocate_type<REOneMany> ();
-    new ($$) REOneMany ($1, true);
+    $$.re = savere_one_many (re_arr, $1.re);
 }
 | atom T_ONE_MANY T_ZERO_ONE {
-    $$ = allocator.allocate_type<REOneMany> ();
-    new ($$) REOneMany ($1, false);
+    $$.re = savere_one_many_lazy (re_arr, $1.re);
 }
 
 /* "e?"/"e??" */
 | atom T_ZERO_ONE {
-    $$ = allocator.allocate_type<REZeroOne> ();
-    new ($$) REZeroOne ($1, true);
+    $$.re = savere_zero_one (re_arr, $1.re);
 }
 | atom T_ZERO_ONE T_ZERO_ONE {
-    $$ = allocator.allocate_type<REZeroOne> ();
-    new ($$) REZeroOne ($1, false);
+    $$.re = savere_zero_one_lazy (re_arr, $1.re);
 }
 
 /* "e{n}"/"e{n}?" */
-| atom T_TIMES {
-    $$ = allocator.allocate_type<RETimes> ();
-    new ($$) RETimes ($1, * (static_cast<unsigned int *> ($2)), true);
+| atom T_NUMBER {
+    $$.re = savere_times_exact (re_arr, $1.re, $2.number);
 }
-| atom T_TIMES T_ZERO_ONE {
-    $$ = allocator.allocate_type<RETimes> ();
-    new ($$) RETimes ($1, * (static_cast<unsigned int *> ($2)), false);
+| atom T_NUMBER T_ZERO_ONE {
+    $$.re = savere_times_exact_lazy (re_arr, $1.re, $2.number);
 }
 
 /* "e{n,}"/"e{n,}?" */
-| atom T_TIMES_FROM {
-    $$ = allocator.allocate_type<RETimesFrom> ();
-    new ($$) RETimesFrom ($1, * (static_cast<unsigned int *> ($2)), true);
+| atom T_NUMBER T_COMMA {
+    $$.re = savere_times_lower (re_arr, $1.re, $2.number);
 }
-| atom T_TIMES_FROM T_ZERO_ONE {
-    $$ = allocator.allocate_type<RETimesFrom> ();
-    new ($$) RETimesFrom ($1, * (static_cast<unsigned int *> ($2)), false);
+| atom T_NUMBER T_COMMA T_ZERO_ONE {
+    $$.re = savere_times_lower_lazy (re_arr, $1.re, $2.number);
 }
 
 /* "e{n,m}"/"e{n,m}?" */
-| atom T_TIMES_FROM_TO {
-    $$ = allocator.allocate_type<RETimesFromTo> ();
-    unsigned int * p = static_cast<unsigned int *> ($2);
-    new ($$) RETimesFromTo ($1, p[0], p[1], true);
+| atom T_NUMBER T_COMMA T_NUMBER {
+    $$.re = savere_times_lower_upper (re_arr, $1.re, $2.number, $3.number);
 }
-| atom T_TIMES_FROM_TO T_ZERO_ONE {
-    $$ = allocator.allocate_type<RETimesFromTo> ();
-    unsigned int * p = static_cast<unsigned int *> ($2);
-    new ($$) RETimesFromTo ($1, p[0], p[1], false);
+| atom T_NUMBER T_COMMA T_NUMBER T_ZERO_ONE {
+    $$.re = savere_times_lower_upper_lazy (re_arr, $1.re, $2.number, $3.number);
 }
 ;
 
 alternative
 : term    /* empty */
 | alternative term {
-    $$ = allocator.allocate_type<RECat> ();
-    new ($$) RECat ($1, $2);
+    $$.re = savere_cat (re_arr, $1.re, $2.re);
 }
 ;
 
 disjunction
 : /* empty */ {
-    $$ = allocator.allocate_type<REEmpty> ();
-    new ($$) REEmpty ();
+    $$.re = savere_empty (re_arr);
 }
 | alternative    /* empty */
 | alternative T_ALT disjunction {
-    $$ = allocator.allocate_type<REAlt> ();
-    new ($$) REAlt ($1, $3);
+    $$.re = savere_alt (re_arr, $1.re, $3.re);
 }
 | T_ALT disjunction {
-    REEmpty * p = allocator.allocate_type<REEmpty> ();
-    new (p) REEmpty ();
-    $$ = allocator.allocate_type<REAlt> (); new ($$) REAlt (p, $2);
+    RE * p_empty = savere_empty (re_arr);
+    $$.re = savere_alt (re_arr, p_empty, $2.re);
 }
 ;
 
-pattern : disjunction;
+pattern
+: disjunction {
+    return $1.re;
+}
+;
 
 
 %{
-
-    return true;
+    ;
 
 #   undef LALR2C_R_TOKEN_TYPE
 #   undef LALR2C_R_TOKEN_SEMANTICS
