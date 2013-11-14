@@ -3,12 +3,27 @@
 
 #include "slab_allocator.hh"
 #include "token_array.h"
-#include "re_array.h"
+#include "nfa.h"
+
+union StackSemantics
+{
+    TokenValue token;
+    Frag frag;
+
+    StackSemantics ()
+        : frag ()
+    { }
+
+    StackSemantics (TokenValue & t)
+    {
+        token = t;
+    }
+};
 
 struct StackType
 {
     unsigned int state;
-    TokenValue semantics;
+    StackSemantics semantics;
 };
 
 class Parser
@@ -31,7 +46,7 @@ class Parser
         operator delete (stack);
     }
 
-    RE * parse (TokenArray & tok_arr, REArray & re_arr, slab_allocator<> & allocator);
+    bool parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_allocator<> & allocator);
 };
 
 #endif // __LJS_PARSER__

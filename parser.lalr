@@ -5,9 +5,9 @@
 #include "debug_parser.h"
 #include "parser.h"
 
-RE * Parser::parse (TokenArray & tok_arr, REArray & re_arr, slab_allocator<> & allocator)
+bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_allocator<> & allocator)
 {
-    TokenValue semantics;
+    StackSemantics semantics;
 
 #   define LALR2C_R_TOKEN_TYPE             tok_arr.start[tok_arr.index].type
 #   define LALR2C_R_TOKEN_SEMANTICS        tok_arr.start[tok_arr.index].value
@@ -26,59 +26,52 @@ RE * Parser::parse (TokenArray & tok_arr, REArray & re_arr, slab_allocator<> & a
 %}
 
 %token    T_ALT
-%token    T_ASSERT
+%token    T_ASSERT_START
+%token    T_ASSERT_END
+%token    T_ASSERT_WORD
 %token    T_ASSERT_FOLLOW
-%token    T_ASSERT_FOLLOW_NOT
 %token    T_BACKREF
 %token    T_CLASS
 %token    T_CLASS_END
 %token    T_CLASS_START
-%token    T_CLASS_START_NEG
-%token    T_CLASS_UNBOXED
 %token    T_COMMA
 %token    T_DASH
 %token    T_DOT
 %token    T_LBRACE_CAPTURE
-%token    T_LBRACE_FOLLOW
-%token    T_LBRACE_FOLLOW_NOT
 %token    T_LBRACE_LAZY
 %token    T_NUMBER
 %token    T_ONE_MANY
 %token    T_RBRACE
 %token    T_RUNE
-%token    T_RUNE_UNBOXED
-%token    T_TIMES
-%token    T_TIMES_FROM
-%token    T_TIMES_FROM_TO
 %token    T_ZERO_MANY
 %token    T_ZERO_ONE
 
-%fail        { return NULL; }
+%fail     { return false; }
 
-%start       pattern
-%stop        T_LAMBDA
+%start    pattern
+%stop     T_LAMBDA
 
 %%
 
 class_ranges
 : {
-    $$.rune_vector = allocator.allocate_type<RuneVector> ();
-    new ($$.rune_vector) RuneVector (allocator);
+    $$.token.rune_vector = allocator.allocate_type<RuneVector> ();
+    new ($$.token.rune_vector) RuneVector (allocator);
 }
-| class_ranges T_RUNE_UNBOXED {
-    $1.rune_vector->push_back ($2.rune);
+| class_ranges T_RUNE {
+    $1.token.rune_vector->push_back ($2.token.rune);
     $$ = $1;
 }
-| class_ranges T_CLASS_UNBOXED {
-    for (unsigned int i = 0; i < $2.rune_vector->size (); ++i)
-        $1.rune_vector->push_back ((* $2.rune_vector)[i]);
+| class_ranges T_CLASS {
+    for (unsigned int i = 0; i < $2.token.rune_vector->size (); ++i)
+        $1.token.rune_vector->push_back ((* $2.token.rune_vector)[i]);
     $$ = $1;
 }
-| class_ranges T_RUNE_UNBOXED T_DASH T_RUNE_UNBOXED {
-    const Rune r1 = $2.rune;
-    const Rune r2 = $4.rune;
+| class_ranges T_RUNE T_DASH T_RUNE {
+    const Rune r1 = $2.token.rune;
+    const Rune r2 = $4.token.rune;
     const Rune r = r2 << 16 | r1;
-    $1.rune_vector->push_back (r);
+    $1.token.rune_vector->push_back (r);
     $$ = $1;
 }
 ;
@@ -87,38 +80,43 @@ class_body
 : class_ranges    /* empty */
 | class_ranges T_DASH {
     const Rune r = '-';
-    $1.rune_vector->push_back (r);
+    $1.token.rune_vector->push_back (r);
     $$ = $1;
 }
 | T_DASH class_ranges {
     const Rune r = '-';
-    $1.rune_vector->push_back (r);
-    $$ = $1;
+    $2.token.rune_vector->push_back (r);
+    $$ = $2;
 }
 | T_DASH class_ranges T_DASH {
     const Rune r = '-';
-    $1.rune_vector->push_back (r);
-    $$ = $1;
+    $2.token.rune_vector->push_back (r);
+    $$ = $2;
 }
 ;
 
 class
 : T_CLASS_START class_body T_CLASS_END {
-    $$.re = savere_rune_class (re_arr, $2.rune_vector);
-}
-| T_CLASS_START_NEG class_body T_CLASS_END {
-    $$.re = savere_rune_class_neg (re_arr, $2.rune_vector);
+    nfa.bind_rune_class ($$.frag, $2.token.rune_vector, $1.token.boolean);
 }
 ;
 
 atom
-: T_RUNE    /* empty */
-| T_BACKREF    /* empty */
-| T_DOT    /* empty */
-| class    /* empty */
-| T_CLASS    /* empty */
+: T_RUNE {
+    nfa.bind_rune ($$.frag, $1.token.rune);
+}
+| T_BACKREF {
+    nfa.bind_backref ($$.frag, $1.token.number);
+}
+| T_DOT {
+    nfa.bind_any ($$.frag);
+}
+| class /* empty */
+| T_CLASS {
+    nfa.bind_rune_class ($$.frag, $1.token.rune_vector, true);
+}
 | T_LBRACE_CAPTURE disjunction T_RBRACE {
-    $$.re = savere_capture (re_arr, $2.re);
+    nfa.bind_capture ($$.frag, $2.frag);
 }
 | T_LBRACE_LAZY disjunction T_RBRACE {
     $$ = $2;
@@ -126,12 +124,17 @@ atom
 ;
 
 assertion
-: T_ASSERT    /* empty */
-| T_LBRACE_FOLLOW disjunction T_RBRACE {
-    $$.re = savere_assert_follow (re_arr, $2.re);
+: T_ASSERT_START {
+    nfa.bind_assert_start ($$.frag);
 }
-| T_LBRACE_FOLLOW_NOT disjunction T_RBRACE {
-    $$.re = savere_assert_follow_not (re_arr, $2.re);
+| T_ASSERT_END {
+    nfa.bind_assert_end ($$.frag);
+}
+| T_ASSERT_WORD {
+    nfa.bind_assert_word ($$.frag, $1.token.boolean);
+}
+| T_ASSERT_FOLLOW disjunction T_RBRACE {
+    nfa.bind_assert_follow ($$.frag, $2.frag, $1.token.boolean);
 }
 ;
 
@@ -141,77 +144,79 @@ term
 
 /* "e*|e*?" */
 | atom T_ZERO_MANY {
-    $$.re = savere_zero_many (re_arr, $1.re);
+    nfa.bind_zero_many ($$.frag, $1.frag);
 }
 | atom T_ZERO_MANY T_ZERO_ONE {
-    $$.re = savere_zero_many_lazy (re_arr, $1.re);
+    nfa.bind_zero_many_lazy ($$.frag, $1.frag);
 }
 
 /* "e+"/"e+?" */
 | atom T_ONE_MANY {
-    $$.re = savere_one_many (re_arr, $1.re);
+    nfa.bind_one_many ($$.frag, $1.frag);
 }
 | atom T_ONE_MANY T_ZERO_ONE {
-    $$.re = savere_one_many_lazy (re_arr, $1.re);
+    nfa.bind_one_many_lazy ($$.frag, $1.frag);
 }
 
 /* "e?"/"e??" */
 | atom T_ZERO_ONE {
-    $$.re = savere_zero_one (re_arr, $1.re);
+    nfa.bind_zero_one ($$.frag, $1.frag);
 }
 | atom T_ZERO_ONE T_ZERO_ONE {
-    $$.re = savere_zero_one_lazy (re_arr, $1.re);
+    nfa.bind_zero_one_lazy ($$.frag, $1.frag);
 }
 
 /* "e{n}"/"e{n}?" */
 | atom T_NUMBER {
-    $$.re = savere_times_exact (re_arr, $1.re, $2.number);
+    nfa.bind_times_eq ($$.frag, $1.frag, $2.token.number);
 }
 | atom T_NUMBER T_ZERO_ONE {
-    $$.re = savere_times_exact_lazy (re_arr, $1.re, $2.number);
+    nfa.bind_times_eq_lazy ($$.frag, $1.frag, $2.token.number);
 }
 
 /* "e{n,}"/"e{n,}?" */
 | atom T_NUMBER T_COMMA {
-    $$.re = savere_times_lower (re_arr, $1.re, $2.number);
+    nfa.bind_times_gteq ($$.frag, $1.frag, $2.token.number);
 }
 | atom T_NUMBER T_COMMA T_ZERO_ONE {
-    $$.re = savere_times_lower_lazy (re_arr, $1.re, $2.number);
+    nfa.bind_times_gteq_lazy ($$.frag, $1.frag, $2.token.number);
 }
 
 /* "e{n,m}"/"e{n,m}?" */
 | atom T_NUMBER T_COMMA T_NUMBER {
-    $$.re = savere_times_lower_upper (re_arr, $1.re, $2.number, $3.number);
+    nfa.bind_times_gteq_lteq ($$.frag, $1.frag, $2.token.number, $4.token.number);
 }
 | atom T_NUMBER T_COMMA T_NUMBER T_ZERO_ONE {
-    $$.re = savere_times_lower_upper_lazy (re_arr, $1.re, $2.number, $3.number);
+    nfa.bind_times_gteq_lteq_lazy ($$.frag, $1.frag, $2.token.number, $4.token.number);
 }
 ;
 
 alternative
 : term    /* empty */
 | alternative term {
-    $$.re = savere_cat (re_arr, $1.re, $2.re);
+    nfa.bind_cat ($$.frag, $1.frag, $2.frag);
 }
 ;
 
 disjunction
 : /* empty */ {
-    $$.re = savere_empty (re_arr);
+    nfa.bind_empty ($$.frag);
 }
 | alternative    /* empty */
 | alternative T_ALT disjunction {
-    $$.re = savere_alt (re_arr, $1.re, $3.re);
+    nfa.bind_alt ($$.frag, $1.frag, $3.frag);
 }
 | T_ALT disjunction {
-    RE * p_empty = savere_empty (re_arr);
-    $$.re = savere_alt (re_arr, p_empty, $2.re);
+    Frag f_empty;
+    nfa.bind_empty (f_empty);
+    nfa.bind_alt ($$.frag, f_empty, $2.frag);
 }
 ;
 
 pattern
 : disjunction {
-    return $1.re;
+    nfa.bind_match ($1.frag);
+    return true;
 }
 ;
 

@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "re.h"
 #include "lex.h"
 #include "rune.h"
 
@@ -9,7 +8,6 @@ bool lex
     ( const char * pattern
     , unsigned int pattern_len
     , TokenArray & tok_arr
-    , REArray & re_arr
     , slab_allocator<> & allocator
     )
 {
@@ -54,110 +52,97 @@ lex_main:
 
         "^"
         {
-            RE * re = savere_assert_start (re_arr);
-            savetoken_re (tok_arr, T_ASSERT, re);
+            savetoken (tok_arr, T_ASSERT_START);
             goto lex_main;
         }
         "$"
         {
-            RE * re = savere_assert_end (re_arr);
-            savetoken_re (tok_arr, T_ASSERT, re);
+            savetoken (tok_arr, T_ASSERT_END);
             goto lex_main;
         }
         "\\b"
         {
-            RE * re = savere_assert_word (re_arr);
-            savetoken_re (tok_arr, T_ASSERT, re);
+            savetoken_boolean (tok_arr, T_ASSERT_WORD, true);
             goto lex_main;
         }
         "\\B"
         {
-            RE * re = savere_assert_word_not (re_arr);
-            savetoken_re (tok_arr, T_ASSERT, re);
+            savetoken_boolean (tok_arr, T_ASSERT_WORD, false);
             goto lex_main;
         }
         "(?="
         {
-            savetoken (tok_arr, T_LBRACE_FOLLOW);
+            savetoken_boolean (tok_arr, T_ASSERT_FOLLOW, true);
             goto lex_main;
         }
         "(?!"
         {
-            savetoken (tok_arr, T_LBRACE_FOLLOW_NOT);
+            savetoken_boolean (tok_arr, T_ASSERT_FOLLOW, false);
             goto lex_main;
         }
 
         "["
         {
-            savetoken (tok_arr, T_CLASS_START);
+            savetoken_boolean (tok_arr, T_CLASS_START, true);
             goto lex_class;
         }
         "[^"
         {
-            savetoken (tok_arr, T_CLASS_START_NEG);
+            savetoken_boolean (tok_arr, T_CLASS_START, false);
             goto lex_class;
         }
         "."
         {
-            RE * p = savere_dot (re_arr);
-            savetoken_re (tok_arr, T_DOT, p);
+            savetoken (tok_arr, T_DOT);
             goto lex_main;
         }
         esc_decimal
         {
             const unsigned int n = (unsigned int) atoi (token);
-            RE * p = savere_backref (re_arr, n);
-            savetoken_re (tok_arr, T_BACKREF, p);
+            savetoken_number (tok_arr, T_BACKREF, n);
             goto lex_main;
         }
         esc_class
         {
             RuneVector * rs = allocator.allocate_type<RuneVector> ();
             to_rune_class (token, * rs);
-            RE * p = savere_rune_class (re_arr, rs);
-            savetoken_re (tok_arr, T_CLASS, p);
+            savetoken_rune_vector (tok_arr, rs);
             goto lex_main;
         }
         esc_null
         {
             const Rune r = '\0';
-            RE * p = savere_rune (re_arr, r);
-            savetoken_re (tok_arr, T_RUNE, p);
+            savetoken_rune (tok_arr, r);
             goto lex_main;
         }
         esc_control
         {
             const Rune r = control_to_rune (token + 1);
-            RE * p = savere_rune (re_arr, r);
-            savetoken_re (tok_arr, T_RUNE, p);
+            savetoken_rune (tok_arr, r);
             goto lex_main;
         }
         esc_control_letter
         {
             const Rune r = control_letter_to_rune (token + 1);
-            RE * p = savere_rune (re_arr, r);
-            savetoken_re (tok_arr, T_RUNE, p);
+            savetoken_rune (tok_arr, r);
             goto lex_main;
         }
         esc_hex
         {
             const Rune r = hex_to_rune (token + 1);
-            RE * p = savere_rune (re_arr, r);
-            savetoken_re (tok_arr, T_RUNE, p);
+            savetoken_rune (tok_arr, r);
             goto lex_main;
         }
         esc_unicode
         {
             const Rune r = unicode_to_rune (token + 1);
-            RE * p = savere_rune (re_arr, r);
-            savetoken_re (tok_arr, T_RUNE, p);
+            savetoken_rune (tok_arr, r);
             goto lex_main;
         }
         esc_identity
         {
             const Rune r = identity_to_rune (token + 1);
-            RE * p = savere_rune (re_arr, r);
-            savetoken_re (tok_arr, T_RUNE, p);
+            savetoken_rune (tok_arr, r);
             goto lex_main;
         }
         [^]
@@ -176,8 +161,7 @@ lex_main:
             else
             {
                 const Rune r = c;
-                RE * p = savere_rune (re_arr, r);
-                savetoken_re (tok_arr, T_RUNE, p);
+                savetoken_rune (tok_arr, r);
                 goto lex_main;
             }
         }
@@ -188,7 +172,7 @@ lex_times:
         [1-9][0-9]* | "0"
         {
             const unsigned int n = atoi (token);
-            savetoken_number (tok_arr, n);
+            savetoken_number (tok_arr, T_NUMBER, n);
             goto lex_times_upper;
         }
         [^] { goto failure; }
@@ -208,7 +192,7 @@ lex_times_upper:
         {
             savetoken (tok_arr, T_COMMA);
             const unsigned int n = atoi (token + 1);
-            savetoken_number (tok_arr, n);
+            savetoken_number (tok_arr, T_NUMBER, n);
             goto lex_main;
         }
         [^] { goto failure; }
@@ -277,7 +261,7 @@ lex_class:
             savetoken_rune (tok_arr, r);
             goto lex_class;
         }
-        [^\x5C\x5D\x2D]
+        [^\x5C\x5D\x2D\x80-\xFF]
         {
             const Rune r = * token;
             savetoken_rune (tok_arr, r);

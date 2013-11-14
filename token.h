@@ -2,7 +2,6 @@
 #define __LJS_TOKEN__
 
 #include "token_type.h"
-#include "re.h"
 #include "rune.h"
 
 __attribute__((unused)) static const char * token_typenames [] =
@@ -22,14 +21,10 @@ enum TokenType
 
 union TokenValue
 {
-    RE *         re;
+    bool         boolean;
     unsigned int number;
     Rune         rune;
     RuneVector * rune_vector;
-
-    TokenValue ()
-        : re (NULL)
-    { }
 };
 
 struct Token
