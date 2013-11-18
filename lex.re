@@ -99,7 +99,7 @@ lex_main:
         esc_decimal
         {
             const unsigned int n = (unsigned int) atoi (token);
-            savetoken_number (tok_arr, T_BACKREF, n);
+            savetoken_backref (tok_arr, n);
             goto lex_main;
         }
         esc_class
@@ -168,16 +168,19 @@ lex_main:
     */
 
 lex_times:
+    token = YYCURSOR;
     /*!re2c
         [1-9][0-9]* | "0"
         {
             const unsigned int n = atoi (token);
-            savetoken_number (tok_arr, T_NUMBER, n);
+            savetoken_count (tok_arr, n);
             goto lex_times_upper;
         }
         [^] { goto failure; }
     */
+
 lex_times_upper:
+    token = YYCURSOR;
     /*!re2c
         "}"
         {
@@ -192,7 +195,7 @@ lex_times_upper:
         {
             savetoken (tok_arr, T_COMMA);
             const unsigned int n = atoi (token + 1);
-            savetoken_number (tok_arr, T_NUMBER, n);
+            savetoken_count (tok_arr, n);
             goto lex_main;
         }
         [^] { goto failure; }

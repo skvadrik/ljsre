@@ -3,6 +3,7 @@
 
 #include "lex.h"
 #include "nfa.h"
+#include "nfa_show.h"
 #include "parser.h"
 
 int main (int argc, char ** argv)
@@ -27,6 +28,8 @@ int main (int argc, char ** argv)
         printf ("syntax error (parse)\n");
         return 3;
     }
+
+    nfa_to_dot ("nfa.dot", nfa);
 
     return 0;
 }

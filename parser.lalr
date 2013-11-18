@@ -35,11 +35,11 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
 %token    T_CLASS_END
 %token    T_CLASS_START
 %token    T_COMMA
+%token    T_COUNT
 %token    T_DASH
 %token    T_DOT
 %token    T_LBRACE_CAPTURE
 %token    T_LBRACE_LAZY
-%token    T_NUMBER
 %token    T_ONE_MANY
 %token    T_RBRACE
 %token    T_RUNE
@@ -106,7 +106,7 @@ atom
     nfa.bind_rune ($$.frag, $1.token.rune);
 }
 | T_BACKREF {
-    nfa.bind_backref ($$.frag, $1.token.number);
+    nfa.bind_backref ($$.frag, $1.token.backref);
 }
 | T_DOT {
     nfa.bind_any ($$.frag);
@@ -167,27 +167,27 @@ term
 }
 
 /* "e{n}"/"e{n}?" */
-| atom T_NUMBER {
-    nfa.bind_times_eq ($$.frag, $1.frag, $2.token.number);
+| atom T_COUNT {
+    nfa.bind_times_eq ($$.frag, $1.frag, $2.token.count);
 }
-| atom T_NUMBER T_ZERO_ONE {
-    nfa.bind_times_eq_lazy ($$.frag, $1.frag, $2.token.number);
+| atom T_COUNT T_ZERO_ONE {
+    nfa.bind_times_eq_lazy ($$.frag, $1.frag, $2.token.count);
 }
 
 /* "e{n,}"/"e{n,}?" */
-| atom T_NUMBER T_COMMA {
-    nfa.bind_times_gteq ($$.frag, $1.frag, $2.token.number);
+| atom T_COUNT T_COMMA {
+    nfa.bind_times_gteq ($$.frag, $1.frag, $2.token.count);
 }
-| atom T_NUMBER T_COMMA T_ZERO_ONE {
-    nfa.bind_times_gteq_lazy ($$.frag, $1.frag, $2.token.number);
+| atom T_COUNT T_COMMA T_ZERO_ONE {
+    nfa.bind_times_gteq_lazy ($$.frag, $1.frag, $2.token.count);
 }
 
 /* "e{n,m}"/"e{n,m}?" */
-| atom T_NUMBER T_COMMA T_NUMBER {
-    nfa.bind_times_gteq_lteq ($$.frag, $1.frag, $2.token.number, $4.token.number);
+| atom T_COUNT T_COMMA T_COUNT {
+    nfa.bind_times_gteq_lteq ($$.frag, $1.frag, $2.token.count, $4.token.count);
 }
-| atom T_NUMBER T_COMMA T_NUMBER T_ZERO_ONE {
-    nfa.bind_times_gteq_lteq_lazy ($$.frag, $1.frag, $2.token.number, $4.token.number);
+| atom T_COUNT T_COMMA T_COUNT T_ZERO_ONE {
+    nfa.bind_times_gteq_lteq_lazy ($$.frag, $1.frag, $2.token.count, $4.token.count);
 }
 ;
 
