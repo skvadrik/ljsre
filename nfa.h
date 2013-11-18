@@ -271,7 +271,6 @@ class NFA
     inline void bind_match                (Frag & f);
 
     inline void copy (Frag & retf, State * s);
-    inline void copy_all (StateList * out, std::map<State *, State *> closed, StateList * sl);
     inline void copy_state (Frag & retf, State * s);
     inline void copy_alt           (Frag & retf, StateAlt * s);
     inline void copy_assert_start  (Frag & retf, StateAssertStart * s);
@@ -299,16 +298,8 @@ inline void NFA<Allocator>::copy (Frag & retf, State * s)
     closed[s] = f.start;
     StateList * out = state_list ();
 
-    copy_all (out, closed, f.out);
-    retf.save (f.start, out);
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::copy_all (StateList * out, std::map<State *, State *> closed, StateList * sl)
-{
-    StateList * sl_new = state_list ();
-    for ( StateList::iterator i = sl->head ()
-        ; i != sl->tail ()
+    for ( StateList::iterator i = f.out->head ()
+        ; i != f.out->tail ()
         ; StateList::next (i)
         )
     {
@@ -325,31 +316,19 @@ inline void NFA<Allocator>::copy_all (StateList * out, std::map<State *, State *
             * ps = iter->second;
             continue;
         }
-
-        Frag f;
-        f.start = NULL;
-        f.out = NULL;
-        copy_state (f, s);
-        * ps = f.start;
-        closed[s] = f.start;
-        sl_new->append (f.out);
-
-        StateList::iterator j = i;
-        for (;;)
+        else
         {
-            StateList::iterator j_old = j;
-            StateList::next (j);
-            if (j == sl->tail ())
-                break;
-            else if (* StateList::elem (j) == s)
-            {
-                * StateList::elem (j) = f.start;
-                sl->remove (j_old);
-            }
+            Frag ff;
+            ff.start = NULL;
+            ff.out = NULL;
+            copy_state (ff, s);
+            * ps = ff.start;
+            closed[s] = ff.start;
+            f.out->append (ff.out);
         }
     }
-    if (sl_new->head () != sl_new->tail ())
-        copy_all (out, closed, sl_new);
+
+    retf.save (f.start, out);
 }
 
 template <typename Allocator>
