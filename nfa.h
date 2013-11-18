@@ -289,17 +289,13 @@ class NFA
 template <typename Allocator>
 inline void NFA<Allocator>::copy (Frag & retf, State * s)
 {
-    Frag f;
-    f.start = NULL;
-    f.out = NULL;
+    copy_state (retf, s);
+    std::map<State *, State *> copied;
+    StateList * in = retf.out;
+    retf.out = state_list ();
 
-    copy_state (f, s);
-    std::map<State *, State *> closed;
-    closed[s] = f.start;
-    StateList * out = state_list ();
-
-    for ( StateList::iterator i = f.out->head ()
-        ; i != f.out->tail ()
+    for ( StateList::iterator i = in->head ()
+        ; i != in->tail ()
         ; StateList::next (i)
         )
     {
@@ -307,28 +303,26 @@ inline void NFA<Allocator>::copy (Frag & retf, State * s)
         State * s = * ps;
         if (s == NULL)
         {
-            out->add (ps);
+            retf.out->add (ps);
             continue;
         }
-        std::map<State *, State *>::iterator iter = closed.find (s);
-        if (iter != closed.end ())
+        std::pair<std::map<State *, State *>::iterator, bool> pair = copied.insert (std::pair<State *, State *> (s, NULL));
+        if (!pair.second)
         {
-            * ps = iter->second;
+            * ps = pair.first->second;
             continue;
         }
         else
         {
-            Frag ff;
-            ff.start = NULL;
-            ff.out = NULL;
-            copy_state (ff, s);
-            * ps = ff.start;
-            closed[s] = ff.start;
-            f.out->append (ff.out);
+            Frag f_tmp;
+            f_tmp.start = NULL;
+            f_tmp.out = NULL;
+            copy_state (f_tmp, s);
+            * ps = f_tmp.start;
+            pair.first->second = f_tmp.start;
+            in->append (f_tmp.out);
         }
     }
-
-    retf.save (f.start, out);
 }
 
 template <typename Allocator>
