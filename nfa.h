@@ -7,35 +7,9 @@
 #include "list.h"
 #include "slab_allocator.hh"
 #include "rune.h"
+#include "state.h"
 
-//namespace nfa {
-
-enum StateType
-    { NFA_ALT
-    , NFA_ASSERT_START
-    , NFA_ASSERT_END
-    , NFA_ASSERT_WORD
-    , NFA_ASSERT_FOLLOW
-    , NFA_RUNE
-    , NFA_RUNE_CLASS
-    , NFA_BACKREF
-    , NFA_ANY
-    , NFA_CAPTURE
-    , NFA_EMPTY
-    , NFA_MATCH
-    };
-
-struct State
-{
-    StateType type;
-    char value [];
-
-    template <typename T>
-    inline T * to ()
-    {
-        return reinterpret_cast<T *> (value);
-    }
-};
+//namespace ljsre {
 
 typedef list<State **, slab_allocator<> > StateList;
 
@@ -62,141 +36,6 @@ static inline void patch (StateList * sl, State * s)
     }
 }
 
-struct StateAlt
-{
-    State * out1;
-    State * out2;
-
-    StateAlt
-        ( State * o1
-        , State * o2
-        )
-        : out1 (o1)
-        , out2 (o2)
-    { }
-};
-
-struct StateAssertStart
-{
-    State * out;
-
-    StateAssertStart (State * o)
-        : out (o)
-    { }
-};
-
-struct StateAssertEnd
-{
-    State * out;
-
-    StateAssertEnd (State * o)
-        : out (o)
-    { }
-};
-
-struct StateAssertWord
-{
-    State * out;
-    bool is_positive;
-
-    StateAssertWord
-        ( State * o
-        , bool p
-        )
-        : out         (o)
-        , is_positive (p)
-    { }
-};
-
-struct StateAssertFollow
-{
-    State * out1;
-    State * out2;
-    bool is_positive;
-
-    StateAssertFollow
-        ( State * o1
-        , State * o2
-        , bool p
-        )
-        : out1        (o1)
-        , out2        (o2)
-        , is_positive (p)
-    { }
-};
-
-struct StateRune
-{
-    State * out;
-    Rune rune;
-
-    StateRune
-        ( State * o
-        , Rune r
-        )
-        : out  (o)
-        , rune (r)
-    { }
-};
-
-struct StateRuneClass
-{
-    State * out;
-    RuneVector * runes;
-    bool is_positive;
-
-    StateRuneClass
-        ( State * o
-        , RuneVector * rs
-        , bool p
-        )
-        : out         (o)
-        , runes       (rs)
-        , is_positive (p)
-    { }
-};
-
-struct StateBackref
-{
-    State * out;
-    unsigned int ref;
-
-    StateBackref
-        ( State * o
-        , unsigned int n
-        )
-        : out (o)
-        , ref (n)
-    { }
-};
-
-struct StateAny
-{
-    State * out;
-
-    StateAny (State * o)
-        : out (o)
-    { }
-};
-
-struct StateCapture
-{
-    State * out;
-
-    StateCapture (State * o)
-        : out (o)
-    { }
-};
-
-struct StateEmpty
-{
-    State * out;
-
-    StateEmpty (State * o)
-        : out (o)
-    { }
-};
-
 template <typename Allocator>
 class NFA
 {
@@ -211,16 +50,21 @@ class NFA
     inline State * save_rune_class      (State * out, RuneVector * rs, bool is_positive);
     inline State * save_backref         (State * out, unsigned int n);
     inline State * save_any             (State * out);
-    inline State * save_capture         (State * out);
+    inline State * save_capture         (State * out, unsigned int n);
     inline State * save_empty           (State * out);
     inline State * save_match           ();
 
+    inline State * copy_state (StateList * out, State * s);
+    inline void copy (Frag & retf, State * s);
+
   public:
     State * start;
+    unsigned int capture_index;
 
     explicit NFA (Allocator & a)
-        : allocator (a)
-        , start     (0)
+        : allocator     (a)
+        , start         (0)
+        , capture_index (0)
     { }
 
     template <typename StateType>
@@ -269,30 +113,15 @@ class NFA
     inline void bind_capture              (Frag & retf, Frag & f);
     inline void bind_empty                (Frag & retf);
     inline void bind_match                (Frag & f);
-
-    inline void copy (Frag & retf, State * s);
-    inline void copy_state (Frag & retf, State * s);
-    inline void copy_alt           (Frag & retf, StateAlt * s);
-    inline void copy_assert_start  (Frag & retf, StateAssertStart * s);
-    inline void copy_assert_end    (Frag & retf, StateAssertEnd * s);
-    inline void copy_assert_word   (Frag & retf, StateAssertWord * s);
-    inline void copy_assert_follow (Frag & retf, StateAssertFollow * s);
-    inline void copy_rune          (Frag & retf, StateRune * s);
-    inline void copy_rune_class    (Frag & retf, StateRuneClass * s);
-    inline void copy_backref       (Frag & retf, StateBackref * s);
-    inline void copy_any           (Frag & retf, StateAny * s);
-    inline void copy_capture       (Frag & retf, StateCapture * s);
-    inline void copy_empty         (Frag & retf, StateEmpty * s);
-    inline void copy_match         (Frag & retf);
 };
 
 template <typename Allocator>
 inline void NFA<Allocator>::copy (Frag & retf, State * s)
 {
-    copy_state (retf, s);
-    std::map<State *, State *> copied;
-    StateList * in = retf.out;
+    StateList * in = state_list ();
+    retf.start = copy_state (in, s);
     retf.out = state_list ();
+    std::map<State *, State *> copied;
 
     for ( StateList::iterator i = in->head ()
         ; i != in->tail ()
@@ -302,133 +131,107 @@ inline void NFA<Allocator>::copy (Frag & retf, State * s)
         State ** ps = StateList::elem (i);
         State * s = * ps;
         if (s == NULL)
-        {
             retf.out->add (ps);
-            continue;
-        }
-        std::pair<std::map<State *, State *>::iterator, bool> pair = copied.insert (std::pair<State *, State *> (s, NULL));
-        if (!pair.second)
-        {
-            * ps = pair.first->second;
-            continue;
-        }
         else
         {
-            Frag f_tmp;
-            f_tmp.start = NULL;
-            f_tmp.out = NULL;
-            copy_state (f_tmp, s);
-            * ps = f_tmp.start;
-            pair.first->second = f_tmp.start;
-            in->append (f_tmp.out);
+            std::pair<std::map<State *, State *>::iterator, bool> pair = copied.insert (std::pair<State *, State *> (s, NULL));
+            if (pair.second)
+                pair.first->second = copy_state (in, s);
+            * ps = pair.first->second;
         }
     }
 }
 
 template <typename Allocator>
-inline void NFA<Allocator>::copy_state (Frag & retf, State * s)
+inline State * NFA<Allocator>::copy_state (StateList * out, State * s)
 {
+    State * s_copy = NULL;
     switch (s->type)
     {
-        case NFA_ALT:           copy_alt           (retf, s->to<StateAlt> ());          return;
-        case NFA_ASSERT_START:  copy_assert_start  (retf, s->to<StateAssertStart> ());  return;
-        case NFA_ASSERT_END:    copy_assert_end    (retf, s->to<StateAssertEnd> ());    return;
-        case NFA_ASSERT_WORD:   copy_assert_word   (retf, s->to<StateAssertWord> ());   return;
-        case NFA_ASSERT_FOLLOW: copy_assert_follow (retf, s->to<StateAssertFollow> ()); return;
-        case NFA_RUNE:          copy_rune          (retf, s->to<StateRune> ());         return;
-        case NFA_RUNE_CLASS:    copy_rune_class    (retf, s->to<StateRuneClass> ());    return;
-        case NFA_BACKREF:       copy_backref       (retf, s->to<StateBackref> ());      return;
-        case NFA_ANY:           copy_any           (retf, s->to<StateAny> ());          return;
-        case NFA_CAPTURE:       copy_capture       (retf, s->to<StateCapture> ());      return;
-        case NFA_EMPTY:         copy_empty         (retf, s->to<StateEmpty> ());        return;
-        case NFA_MATCH:         copy_match         (retf);                              return;
+        case NFA_ALT:
+        {
+            const StateAlt * p = s->to<StateAlt> ();
+            s_copy = save_alt (p->out1, p->out2);
+            StateAlt * q = s_copy->to<StateAlt> ();
+            out->add (&(q->out1));
+            out->add (&(q->out2));
+            break;
+        }
+        case NFA_ASSERT_START:
+        {
+            s_copy = save_assert_start (s->to<StateAssertStart> ()->out);
+            out->add (&(s_copy->to<StateAssertStart> ()->out));
+            break;
+        }
+        case NFA_ASSERT_END:
+        {
+            s_copy = save_assert_end (s->to<StateAssertEnd> ()->out);
+            out->add (&(s_copy->to<StateAssertEnd> ()->out));
+            break;
+        }
+        case NFA_ASSERT_WORD:
+        {
+            const StateAssertWord * p = s->to<StateAssertWord> ();
+            s_copy = save_assert_word (p->out, p->is_positive);
+            out->add (&(s_copy->to<StateAssertWord> ()->out));
+            break;
+        }
+        case NFA_ASSERT_FOLLOW:
+        {
+            const StateAssertFollow * p = s->to<StateAssertFollow> ();
+            s_copy = save_assert_follow (p->out1, p->out2, p->is_positive);
+            StateAssertFollow * q = s_copy->to<StateAssertFollow> ();
+            out->add (&(q->out1));
+            out->add (&(q->out2));
+            break;
+        }
+        case NFA_RUNE:
+        {
+            const StateRune * p = s->to<StateRune> ();
+            s_copy = save_rune (p->out, p->rune);
+            out->add (&(s_copy->to<StateRune> ()->out));
+            break;
+        }
+        case NFA_RUNE_CLASS:
+        {
+            const StateRuneClass * p = s->to<StateRuneClass> ();
+            s_copy = save_rune_class (p->out, p->runes, p->is_positive);
+            out->add (&(s_copy->to<StateRuneClass> ()->out));
+            break;
+        }
+        case NFA_BACKREF:
+        {
+            const StateBackref * p = s->to<StateBackref> ();
+            s_copy = save_backref (p->out, p->ref);
+            out->add (&(s_copy->to<StateBackref> ()->out));
+            break;
+        }
+        case NFA_ANY:
+        {
+            s_copy = save_any (s->to<StateCapture> ()->out);
+            out->add (&(s_copy->to<StateCapture> ()->out));
+            break;
+        }
+        case NFA_CAPTURE:
+        {
+            const StateCapture * p = s->to<StateCapture> ();
+            s_copy = save_capture (p->out, p->sub);
+            out->add (&(s_copy->to<StateCapture> ()->out));
+            break;
+        }
+        case NFA_EMPTY:
+        {
+            s_copy = save_empty (s->to<StateEmpty> ()->out);
+            out->add (&(s_copy->to<StateEmpty> ()->out));
+            break;
+        }
+        case NFA_MATCH:
+        {
+            s_copy = save_match ();
+            break;
+        }
     }
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::copy_alt (Frag & retf, StateAlt * s)
-{
-    retf.start = save_alt (s->out1, s->out2);
-    retf.out = state_list (&(retf.start->to<StateAlt> ()->out1));
-    retf.out->add (&(retf.start->to<StateAlt> ()->out2));
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::copy_assert_start (Frag & retf, StateAssertStart * s)
-{
-    retf.start = save_assert_start (s->out);
-    retf.out = state_list (&(retf.start->to<StateAssertStart> ()->out));
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::copy_assert_end (Frag & retf, StateAssertEnd * s)
-{
-    retf.start = save_assert_end (s->out);
-    retf.out = state_list (&(retf.start->to<StateAssertEnd> ()->out));
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::copy_assert_word (Frag & retf, StateAssertWord * s)
-{
-    retf.start = save_assert_word (s->out, s->is_positive);
-    retf.out = state_list (&(retf.start->to<StateAssertWord> ()->out));
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::copy_assert_follow (Frag & retf, StateAssertFollow * s)
-{
-    retf.start = save_assert_follow (s->out1, s->out2, s->is_positive);
-    retf.out = state_list (&(retf.start->to<StateAssertFollow> ()->out1));
-    retf.out->add (&(retf.start->to<StateAssertFollow> ()->out2));
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::copy_rune (Frag & retf, StateRune * s)
-{
-    retf.start = save_rune (s->out, s->rune);
-    retf.out = state_list (&(retf.start->to<StateRune> ()->out));
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::copy_rune_class (Frag & retf, StateRuneClass * s)
-{
-    retf.start = save_rune_class (s->out, s->runes, s->is_positive);
-    retf.out = state_list (&(retf.start->to<StateRuneClass> ()->out));
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::copy_backref (Frag & retf, StateBackref * s)
-{
-    retf.start = save_backref (s->out, s->ref);
-    retf.out = state_list (&(retf.start->to<StateBackref> ()->out));
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::copy_any (Frag & retf, StateAny * s)
-{
-    retf.start = save_any (s->out);
-    retf.out = state_list (&(retf.start->to<StateCapture> ()->out));
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::copy_capture (Frag & retf, StateCapture * s)
-{
-    retf.start = save_capture (s->out);
-    retf.out = state_list (&(retf.start->to<StateCapture> ()->out));
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::copy_empty (Frag & retf, StateEmpty * s)
-{
-    retf.start = save_empty (s->out);
-    retf.out = state_list (&(retf.start->to<StateEmpty> ()->out));
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::copy_match (Frag & retf)
-{
-    retf.start = save_match ();
-    retf.out = NULL;
+    return s_copy;
 }
 
 template <typename Allocator>
@@ -513,11 +316,11 @@ inline State * NFA<Allocator>::save_any (State * out)
 }
 
 template <typename Allocator>
-inline State * NFA<Allocator>::save_capture (State * out)
+inline State * NFA<Allocator>::save_capture (State * out, unsigned int n)
 {
     State * s = alloc_state<StateCapture> ();
     s->type = NFA_CAPTURE;
-    new (s->value) StateCapture (out);
+    new (s->value) StateCapture (out, n);
     return s;
 }
 
@@ -778,8 +581,9 @@ inline void NFA<Allocator>::bind_any (Frag & retf)
 template <typename Allocator>
 inline void NFA<Allocator>::bind_capture (Frag & retf, Frag & f)
 {
-    State * s1 = save_capture (f.start);
-    State * s2 = save_capture (NULL);
+    State * s1 = save_capture (f.start, 2 * capture_index);
+    State * s2 = save_capture (NULL, 2 * capture_index + 1);
+    ++ capture_index;
     patch (f.out, s2);
     StateList * out = state_list (&(s2->to<StateCapture> ()->out));
 
@@ -803,7 +607,6 @@ inline void NFA<Allocator>::bind_match (Frag & f)
     start = f.start;
 }
 
-//}; // namespace nfa
+//}; // namespace ljsre
 
 #endif // __LJSRE_NFA__
-
