@@ -37,4 +37,14 @@ static inline bool to_rune_class (const char * , RuneVector & )
     return false;
 }
 
+static inline bool is_word_rune (Rune)
+{
+    return true;
+}
+
+static inline bool member (Rune, RuneVector *)
+{
+    return true;
+}
+
 #endif // __RUNE__

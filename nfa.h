@@ -39,8 +39,6 @@ static inline void patch (StateList * sl, State * s)
 template <typename Allocator>
 class NFA
 {
-    Allocator & allocator;
-
     inline State * save_alt             (State * out1, State * out2);
     inline State * save_assert_start    (State * out);
     inline State * save_assert_end      (State * out);
@@ -58,13 +56,16 @@ class NFA
     inline void copy (Frag & retf, State * s);
 
   public:
+    Allocator & allocator;
     State * start;
-    unsigned int capture_index;
+    unsigned int captures;
+    unsigned int size;
 
     explicit NFA (Allocator & a)
-        : allocator     (a)
-        , start         (0)
-        , capture_index (0)
+        : allocator (a)
+        , start     (0)
+        , captures  (0)
+        , size      (0)
     { }
 
     template <typename StateType>
@@ -96,21 +97,20 @@ class NFA
     inline void bind_zero_many_lazy       (Frag & retf, Frag & f);
     inline void bind_one_many             (Frag & retf, Frag & f);
     inline void bind_one_many_lazy        (Frag & retf, Frag & f);
-    inline void bind_times_eq             (Frag & retf, Frag & f, int n);
-    inline void bind_times_eq_lazy        (Frag & retf, Frag & f, int n);
-    inline void bind_times_gteq           (Frag & retf, Frag & f, int n);
-    inline void bind_times_gteq_lazy      (Frag & retf, Frag & f, int n);
-    inline void bind_times_gteq_lteq      (Frag & retf, Frag & f, int n, int m);
-    inline void bind_times_gteq_lteq_lazy (Frag & retf, Frag & f, int n, int m);
+    inline void bind_times_eq             (Frag & retf, Frag & f, unsigned int n);
+    inline void bind_times_gteq           (Frag & retf, Frag & f, unsigned int n);
+    inline void bind_times_gteq_lazy      (Frag & retf, Frag & f, unsigned int n);
+    inline bool bind_times_gteq_lteq      (Frag & retf, Frag & f, unsigned int n, unsigned int m);
+    inline bool bind_times_gteq_lteq_lazy (Frag & retf, Frag & f, unsigned int n, unsigned int m);
     inline void bind_assert_start         (Frag & retf);
     inline void bind_assert_end           (Frag & retf);
     inline void bind_assert_word          (Frag & retf, bool is_positive);
     inline void bind_assert_follow        (Frag & retf, Frag & f, bool is_positive);
     inline void bind_rune                 (Frag & retf, Rune r);
     inline void bind_rune_class           (Frag & retf, RuneVector * rs, bool is_positive);
-    inline void bind_backref              (Frag & retf, unsigned int n);
+    inline bool bind_backref              (Frag & retf, unsigned int n);
     inline void bind_any                  (Frag & retf);
-    inline void bind_capture              (Frag & retf, Frag & f);
+    inline void bind_capture              (Frag & retf, Frag & f, unsigned int n);
     inline void bind_empty                (Frag & retf);
     inline void bind_match                (Frag & f);
 };
@@ -237,7 +237,9 @@ inline State * NFA<Allocator>::copy_state (StateList * out, State * s)
 template <typename Allocator>
 inline State * NFA<Allocator>::save_alt (State * out1, State * out2)
 {
+    ++ size;
     State * s = alloc_state<StateAlt> ();
+    s->step = 0;
     s->type = NFA_ALT;
     new (s->value) StateAlt (out1, out2);
     return s;
@@ -246,7 +248,9 @@ inline State * NFA<Allocator>::save_alt (State * out1, State * out2)
 template <typename Allocator>
 inline State * NFA<Allocator>::save_assert_start (State * out)
 {
+    ++ size;
     State * s = alloc_state<StateAssertStart> ();
+    s->step = 0;
     s->type = NFA_ASSERT_START;
     new (s->value) StateAssertStart (out);
     return s;
@@ -255,7 +259,9 @@ inline State * NFA<Allocator>::save_assert_start (State * out)
 template <typename Allocator>
 inline State * NFA<Allocator>::save_assert_end (State * out)
 {
+    ++ size;
     State * s = alloc_state<StateAssertEnd> ();
+    s->step = 0;
     s->type = NFA_ASSERT_END;
     new (s->value) StateAssertEnd (out);
     return s;
@@ -264,7 +270,9 @@ inline State * NFA<Allocator>::save_assert_end (State * out)
 template <typename Allocator>
 inline State * NFA<Allocator>::save_assert_word (State * out, bool is_positive)
 {
+    ++ size;
     State * s = alloc_state<StateAssertWord> ();
+    s->step = 0;
     s->type = NFA_ASSERT_WORD;
     new (s->value) StateAssertWord (out, is_positive);
     return s;
@@ -273,7 +281,9 @@ inline State * NFA<Allocator>::save_assert_word (State * out, bool is_positive)
 template <typename Allocator>
 inline State * NFA<Allocator>::save_assert_follow (State * out1, State * out2, bool is_positive)
 {
+    ++ size;
     State * s = alloc_state<StateAssertFollow> ();
+    s->step = 0;
     s->type = NFA_ASSERT_FOLLOW;
     new (s->value) StateAssertFollow (out1, out2, is_positive);
     return s;
@@ -282,7 +292,9 @@ inline State * NFA<Allocator>::save_assert_follow (State * out1, State * out2, b
 template <typename Allocator>
 inline State * NFA<Allocator>::save_rune (State * out, Rune r)
 {
+    ++ size;
     State * s = alloc_state<StateRune> ();
+    s->step = 0;
     s->type = NFA_RUNE;
     new (s->value) StateRune (out, r);
     return s;
@@ -291,7 +303,9 @@ inline State * NFA<Allocator>::save_rune (State * out, Rune r)
 template <typename Allocator>
 inline State * NFA<Allocator>::save_rune_class (State * out, RuneVector * rs, bool is_positive)
 {
+    ++ size;
     State * s = alloc_state<StateRuneClass> ();
+    s->step = 0;
     s->type = NFA_RUNE_CLASS;
     new (s->value) StateRuneClass (out, rs, is_positive);
     return s;
@@ -300,7 +314,9 @@ inline State * NFA<Allocator>::save_rune_class (State * out, RuneVector * rs, bo
 template <typename Allocator>
 inline State * NFA<Allocator>::save_backref (State * out, unsigned int n)
 {
+    ++ size;
     State * s = alloc_state<StateBackref> ();
+    s->step = 0;
     s->type = NFA_BACKREF;
     new (s->value) StateBackref (out, n);
     return s;
@@ -309,7 +325,9 @@ inline State * NFA<Allocator>::save_backref (State * out, unsigned int n)
 template <typename Allocator>
 inline State * NFA<Allocator>::save_any (State * out)
 {
+    ++ size;
     State * s = alloc_state<StateAny> ();
+    s->step = 0;
     s->type = NFA_ANY;
     new (s->value) StateAny (out);
     return s;
@@ -318,7 +336,9 @@ inline State * NFA<Allocator>::save_any (State * out)
 template <typename Allocator>
 inline State * NFA<Allocator>::save_capture (State * out, unsigned int n)
 {
+    ++ size;
     State * s = alloc_state<StateCapture> ();
+    s->step = 0;
     s->type = NFA_CAPTURE;
     new (s->value) StateCapture (out, n);
     return s;
@@ -327,7 +347,9 @@ inline State * NFA<Allocator>::save_capture (State * out, unsigned int n)
 template <typename Allocator>
 inline State * NFA<Allocator>::save_empty (State * out)
 {
+    ++ size;
     State * s = alloc_state<StateEmpty> ();
+    s->step = 0;
     s->type = NFA_EMPTY;
     new (s->value) StateEmpty (out);
     return s;
@@ -336,7 +358,9 @@ inline State * NFA<Allocator>::save_empty (State * out)
 template <typename Allocator>
 inline State * NFA<Allocator>::save_match ()
 {
+    ++ size;
     State * s = static_cast<State *> (allocator.allocate (offsetof (State, value)));
+    s->step = 0;
     s->type = NFA_MATCH;
     return s;
 }
@@ -417,91 +441,126 @@ inline void NFA<Allocator>::bind_one_many_lazy (Frag & retf, Frag & f)
 }
 
 template <typename Allocator>
-inline void NFA<Allocator>::bind_times_eq (Frag & retf, Frag & f, int n)
+inline void NFA<Allocator>::bind_times_eq (Frag & retf, Frag & f, unsigned int n)
 {
-    Frag f1 = f;
-    for (int i = 0; i < n - 1; ++i)
+    if (n == 0)
+        bind_empty (retf);
+    else if (n == 1)
+        retf = f;
+    else
     {
+        Frag f1 = f;
+        for (int i = 0; i < n - 1; ++i)
+        {
+            Frag f2;
+            copy (f2, f1.start);
+            patch (f1.out, f2.start);
+            f1 = f2;
+        }
+        retf.save (f.start, f1.out);
+    }
+}
+
+template <typename Allocator>
+inline void NFA<Allocator>::bind_times_gteq (Frag & retf, Frag & f, unsigned int n)
+{
+    if (n == 0)
+        bind_zero_many (retf, f);
+    else if (n == 1)
+        bind_one_many (retf, f);
+    else
+    {
+        Frag f_copy;
+        copy (f_copy, f.start);
+
+        Frag f1;
+        bind_times_eq (f1, f, n - 1);
+
         Frag f2;
-        copy (f2, f1.start);
-        patch (f1.out, f2.start);
-        f1 = f2;
+        bind_one_many (f2, f_copy);
+
+        bind_cat (retf, f1, f2);
     }
-
-    retf.save (f.start, f1.out);
 }
 
 template <typename Allocator>
-inline void NFA<Allocator>::bind_times_eq_lazy (Frag & retf, Frag & f, int n)
+inline void NFA<Allocator>::bind_times_gteq_lazy (Frag & retf, Frag & f, unsigned int n)
 {
-    bind_times_eq (retf, f, n);
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::bind_times_gteq (Frag & retf, Frag & f, int n)
-{
-    Frag f2, f_tmp;
-    copy (f_tmp, f.start);
-    bind_one_many (f2, f_tmp);
-
-    Frag f1;
-    bind_times_eq (f1, f, n - 1);
-
-    bind_cat (retf, f1, f2);
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::bind_times_gteq_lazy (Frag & retf, Frag & f, int n)
-{
-    Frag f2, f_tmp;
-    copy (f_tmp, f.start);
-    bind_one_many_lazy (f2, f_tmp);
-
-    Frag f1;
-    bind_times_eq (f1, f, n - 1);
-
-    bind_cat (retf, f1, f2);
-}
-
-template <typename Allocator>
-inline void NFA<Allocator>::bind_times_gteq_lteq (Frag & retf, Frag & f, int n, int m)
-{
-    Frag ff;
-    copy (ff, f.start);
-
-    Frag f1;
-    bind_times_eq (f1, f, n);
-
-    Frag f2 = f1;
-    for (int i = n + 1; i <= m; ++i)
+    if (n == 0)
+        bind_zero_many_lazy (retf, f);
+    else if (n == 1)
+        bind_one_many_lazy (retf, f);
+    else
     {
-        Frag f3, f_tmp;
-        copy (f_tmp, ff.start);
-        bind_zero_one (f3, f_tmp);
-        patch (f2.out, f3.start);
-        f2 = f3;
-    }
+        Frag f_copy;
+        copy (f_copy, f.start);
 
-    retf.save (f1.start, f2.out);
+        Frag f1;
+        bind_times_eq (f1, f, n - 1);
+
+        Frag f2;
+        bind_one_many_lazy (f2, f_copy);
+
+        bind_cat (retf, f1, f2);
+    }
 }
 
 template <typename Allocator>
-inline void NFA<Allocator>::bind_times_gteq_lteq_lazy (Frag & retf, Frag & f, int n, int m)
+inline bool NFA<Allocator>::bind_times_gteq_lteq (Frag & retf, Frag & f, unsigned int n, unsigned int m)
 {
-    Frag f1;
-    bind_times_eq (f1, f, n);
-
-    Frag f2 = f1;
-    for (int i = n + 1; i <= m; ++i)
+    if (n > m)
+        return false;
+    else
     {
-        Frag f3, f_tmp;
-        copy (f_tmp, f.start);
-        bind_zero_one_lazy (f3, f_tmp);
-        patch (f2.out, f3.start);
-        f2 = f3;
-    }
+        Frag f_copy;
+        copy (f_copy, f.start);
 
-    retf.save (f1.start, f2.out);
+        Frag f1;
+        bind_times_eq (f1, f, n);
+
+        StateList * out = f1.out;
+        for (int i = n + 1; i <= m; ++i)
+        {
+            Frag f2;
+            copy (f2, f_copy.start);
+            Frag f3;
+            bind_zero_one (f3, f2);
+            patch (out, f3.start);
+            out = f3.out;
+        }
+
+        retf.save (f1.start, out);
+        return true;
+    }
+}
+
+template <typename Allocator>
+inline bool NFA<Allocator>::bind_times_gteq_lteq_lazy (Frag & retf, Frag & f, unsigned int n, unsigned int m)
+{
+    if (n > m)
+        return false;
+    else
+    {
+        Frag f_copy;
+        copy (f_copy, f.start);
+
+        Frag f1;
+        bind_times_eq (f1, f, n);
+
+        StateList * out = f1.out;
+        for (int i = n + 1; i <= m; ++i)
+        {
+            Frag f2;
+            copy (f2, f_copy.start);
+            Frag f3;
+            bind_zero_one_lazy (f3, f2);
+            patch (out, f3.start);
+            out = f3.out;
+        }
+
+        retf.save (f1.start, out);
+        return true;
+    }
 }
 
 template <typename Allocator>
@@ -561,12 +620,17 @@ inline void NFA<Allocator>::bind_rune_class (Frag & retf, RuneVector * rs, bool 
 }
 
 template <typename Allocator>
-inline void NFA<Allocator>::bind_backref (Frag & retf, unsigned int n)
+inline bool NFA<Allocator>::bind_backref (Frag & retf, unsigned int n)
 {
-    State * s = save_backref (NULL, n);
-    StateList * out = state_list (&(s->to<StateBackref> ()->out));
-
-    retf.save (s, out);
+    if (n > captures)
+        return false;
+    else
+    {
+        State * s = save_backref (NULL, n);
+        StateList * out = state_list (&(s->to<StateBackref> ()->out));
+        retf.save (s, out);
+        return true;
+    }
 }
 
 template <typename Allocator>
@@ -579,11 +643,10 @@ inline void NFA<Allocator>::bind_any (Frag & retf)
 }
 
 template <typename Allocator>
-inline void NFA<Allocator>::bind_capture (Frag & retf, Frag & f)
+inline void NFA<Allocator>::bind_capture (Frag & retf, Frag & f, unsigned int n)
 {
-    State * s1 = save_capture (f.start, 2 * capture_index);
-    State * s2 = save_capture (NULL, 2 * capture_index + 1);
-    ++ capture_index;
+    State * s1 = save_capture (f.start, 2 * n);
+    State * s2 = save_capture (NULL, 2 * n + 1);
     patch (f.out, s2);
     StateList * out = state_list (&(s2->to<StateCapture> ()->out));
 

@@ -46,7 +46,7 @@ class Parser
         operator delete (stack);
     }
 
-    bool parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_allocator<> & allocator);
+    bool parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa);
 };
 
 #endif // __LJS_PARSER__

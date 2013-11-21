@@ -22,8 +22,7 @@ enum TokenType
 union TokenValue
 {
     bool         boolean;
-    unsigned int backref;
-    int          count;
+    unsigned int uint;
     Rune         rune;
     RuneVector * rune_vector;
 };

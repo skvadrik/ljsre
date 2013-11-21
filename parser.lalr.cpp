@@ -5,7 +5,7 @@
 #include "debug_parser.h"
 #include "parser.h"
 
-bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_allocator<> & allocator)
+bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa)
 {
     StackSemantics semantics;
 
@@ -55,7 +55,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
                 goto lalr2c_state_10;
             case T_ASSERT_START:
                 goto lalr2c_state_5;
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
                 goto lalr2c_state_12;
             default:
                 { return false; }
@@ -92,7 +92,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
                 goto lalr2c_state_10;
             case T_ASSERT_START:
                 goto lalr2c_state_5;
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
                 goto lalr2c_state_12;
             default:
                 { return false; }
@@ -114,7 +114,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -153,7 +153,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
                 goto lalr2c_state_10;
             case T_ASSERT_START:
                 goto lalr2c_state_5;
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
                 goto lalr2c_state_12;
             default:
                 { return false; }
@@ -175,7 +175,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -200,7 +200,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -226,7 +226,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_COUNT:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_ONE_MANY:
             case T_RBRACE:
             case T_RUNE:
@@ -255,14 +255,14 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_COUNT:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_ONE_MANY:
             case T_RBRACE:
             case T_RUNE:
             case T_ZERO_MANY:
             case T_ZERO_ONE:
             case T_LAMBDA:
-                goto lalr2c_reduce_14;
+                goto lalr2c_reduce_15;
             default:
                 { return false; }
         }
@@ -301,7 +301,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_COUNT:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_ONE_MANY:
             case T_RBRACE:
             case T_RUNE:
@@ -343,7 +343,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
                 goto lalr2c_state_10;
             case T_ASSERT_START:
                 goto lalr2c_state_5;
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
                 goto lalr2c_state_12;
             default:
                 { return false; }
@@ -379,7 +379,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
                 goto lalr2c_state_10;
             case T_ASSERT_START:
                 goto lalr2c_state_5;
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
                 goto lalr2c_state_12;
             default:
                 { return false; }
@@ -402,7 +402,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_COUNT:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_ONE_MANY:
             case T_RBRACE:
             case T_RUNE:
@@ -443,7 +443,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_RBRACE:
             case T_LAMBDA:
                 goto lalr2c_reduce_40;
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
                 goto lalr2c_state_12;
             default:
                 { return false; }
@@ -463,7 +463,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -488,7 +488,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -518,14 +518,14 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_COUNT:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_ONE_MANY:
             case T_RBRACE:
             case T_RUNE:
             case T_ZERO_MANY:
             case T_ZERO_ONE:
             case T_LAMBDA:
-                goto lalr2c_reduce_13;
+                goto lalr2c_reduce_14;
             default:
                 { return false; }
         }
@@ -564,7 +564,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -578,7 +578,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
         switch (LALR2C_R_TOKEN_TYPE)
         {
             case T_RBRACE:
-                goto lalr2c_state_36;
+                goto lalr2c_state_34;
             default:
                 { return false; }
         }
@@ -588,7 +588,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
         switch (LALR2C_R_TOKEN_TYPE)
         {
             case T_RBRACE:
-                goto lalr2c_state_34;
+                goto lalr2c_state_40;
             default:
                 { return false; }
         }
@@ -635,7 +635,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
                 goto lalr2c_state_10;
             case T_ASSERT_START:
                 goto lalr2c_state_5;
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
                 goto lalr2c_state_12;
             default:
                 { return false; }
@@ -655,7 +655,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -681,8 +681,6 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
         switch (LALR2C_R_TOKEN_TYPE)
         {
             case T_ZERO_ONE:
-                goto lalr2c_state_39;
-            case T_COMMA:
                 goto lalr2c_state_38;
             case T_ALT:
             case T_ASSERT_END:
@@ -694,11 +692,13 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
                 goto lalr2c_reduce_33;
+            case T_COMMA:
+                goto lalr2c_state_37;
             default:
                 { return false; }
         }
@@ -721,7 +721,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -748,7 +748,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -773,13 +773,13 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
                 goto lalr2c_reduce_29;
             case T_ZERO_ONE:
-                goto lalr2c_state_40;
+                goto lalr2c_state_39;
             default:
                 { return false; }
         }
@@ -805,7 +805,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
         switch (LALR2C_R_TOKEN_TYPE)
         {
             case T_CLASS_END:
-                goto lalr2c_state_37;
+                goto lalr2c_state_36;
             default:
                 { return false; }
         }
@@ -842,7 +842,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -867,7 +867,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -893,36 +893,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_COUNT:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
-            case T_ONE_MANY:
-            case T_RBRACE:
-            case T_RUNE:
-            case T_ZERO_MANY:
-            case T_ZERO_ONE:
-            case T_LAMBDA:
-                goto lalr2c_reduce_15;
-            default:
-                { return false; }
-        }
-    lalr2c_state_37:
-        LALR2C_RW_STACK_STATE (0) = 37;
-        LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_R_TOKEN_SEMANTICS;
-        LALR2C_E_SHIFT_TOKEN ();
-        LALR2C_E_RESERVE_STACK ();
-        switch (LALR2C_R_TOKEN_TYPE)
-        {
-            case T_ALT:
-            case T_ASSERT_END:
-            case T_ASSERT_FOLLOW:
-            case T_ASSERT_START:
-            case T_ASSERT_WORD:
-            case T_BACKREF:
-            case T_CLASS:
-            case T_CLASS_START:
-            case T_COUNT:
-            case T_DOT:
-            case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_ONE_MANY:
             case T_RBRACE:
             case T_RUNE:
@@ -933,8 +904,8 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             default:
                 { return false; }
         }
-    lalr2c_state_38:
-        LALR2C_RW_STACK_STATE (0) = 38;
+    lalr2c_state_37:
+        LALR2C_RW_STACK_STATE (0) = 37;
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_R_TOKEN_SEMANTICS;
         LALR2C_E_SHIFT_TOKEN ();
         LALR2C_E_RESERVE_STACK ();
@@ -954,11 +925,36 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
                 goto lalr2c_reduce_32;
+            default:
+                { return false; }
+        }
+    lalr2c_state_38:
+        LALR2C_RW_STACK_STATE (0) = 38;
+        LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_R_TOKEN_SEMANTICS;
+        LALR2C_E_SHIFT_TOKEN ();
+        LALR2C_E_RESERVE_STACK ();
+        switch (LALR2C_R_TOKEN_TYPE)
+        {
+            case T_ALT:
+            case T_ASSERT_END:
+            case T_ASSERT_FOLLOW:
+            case T_ASSERT_START:
+            case T_ASSERT_WORD:
+            case T_BACKREF:
+            case T_CLASS:
+            case T_CLASS_START:
+            case T_DOT:
+            case T_LBRACE_CAPTURE:
+            case T_LBRACE_GROUP:
+            case T_RBRACE:
+            case T_RUNE:
+            case T_LAMBDA:
+                goto lalr2c_reduce_31;
             default:
                 { return false; }
         }
@@ -979,11 +975,11 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
-                goto lalr2c_reduce_31;
+                goto lalr2c_reduce_26;
             default:
                 { return false; }
         }
@@ -1002,13 +998,17 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_BACKREF:
             case T_CLASS:
             case T_CLASS_START:
+            case T_COUNT:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
+            case T_ONE_MANY:
             case T_RBRACE:
             case T_RUNE:
+            case T_ZERO_MANY:
+            case T_ZERO_ONE:
             case T_LAMBDA:
-                goto lalr2c_reduce_26;
+                goto lalr2c_reduce_13;
             default:
                 { return false; }
         }
@@ -1030,7 +1030,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_COUNT:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_ONE_MANY:
             case T_RBRACE:
             case T_RUNE:
@@ -1130,7 +1130,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -1181,7 +1181,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -1206,7 +1206,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -1231,7 +1231,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
             case T_CLASS_START:
             case T_DOT:
             case T_LBRACE_CAPTURE:
-            case T_LBRACE_LAZY:
+            case T_LBRACE_GROUP:
             case T_RBRACE:
             case T_RUNE:
             case T_LAMBDA:
@@ -1302,28 +1302,28 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
         goto lalr2c_nonterminal_Nalternative;
     lalr2c_reduce_34:
         {
-    nfa.bind_times_gteq_lazy (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (4).frag, LALR2C_RW_STACK_SEMANTICS (3).token.count);
+    nfa.bind_times_gteq_lazy (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (4).frag, LALR2C_RW_STACK_SEMANTICS (3).token.uint);
 }
         LALR2C_E_POP_STACK (4);
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Nterm;
     lalr2c_reduce_33:
         {
-    nfa.bind_times_eq (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (2).frag, LALR2C_RW_STACK_SEMANTICS (1).token.count);
+    nfa.bind_times_eq (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (2).frag, LALR2C_RW_STACK_SEMANTICS (1).token.uint);
 }
         LALR2C_E_POP_STACK (2);
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Nterm;
     lalr2c_reduce_32:
         {
-    nfa.bind_times_gteq (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (3).frag, LALR2C_RW_STACK_SEMANTICS (2).token.count);
+    nfa.bind_times_gteq (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (3).frag, LALR2C_RW_STACK_SEMANTICS (2).token.uint);
 }
         LALR2C_E_POP_STACK (3);
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Nterm;
     lalr2c_reduce_31:
         {
-    nfa.bind_times_eq_lazy (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (3).frag, LALR2C_RW_STACK_SEMANTICS (2).token.count);
+    nfa.bind_times_eq (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (3).frag, LALR2C_RW_STACK_SEMANTICS (2).token.uint); // no lazy version
 }
         LALR2C_E_POP_STACK (3);
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
@@ -1344,14 +1344,16 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
         goto lalr2c_nonterminal_Nterm;
     lalr2c_reduce_28:
         {
-    nfa.bind_times_gteq_lteq_lazy (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (5).frag, LALR2C_RW_STACK_SEMANTICS (4).token.count, LALR2C_RW_STACK_SEMANTICS (2).token.count);
+    if (!nfa.bind_times_gteq_lteq_lazy (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (5).frag, LALR2C_RW_STACK_SEMANTICS (4).token.uint, LALR2C_RW_STACK_SEMANTICS (2).token.uint))
+        return false;
 }
         LALR2C_E_POP_STACK (5);
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Nterm;
     lalr2c_reduce_27:
         {
-    nfa.bind_times_gteq_lteq (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (4).frag, LALR2C_RW_STACK_SEMANTICS (3).token.count, LALR2C_RW_STACK_SEMANTICS (1).token.count);
+    if (!nfa.bind_times_gteq_lteq (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (4).frag, LALR2C_RW_STACK_SEMANTICS (3).token.uint, LALR2C_RW_STACK_SEMANTICS (1).token.uint))
+        return false;
 }
         LALR2C_E_POP_STACK (4);
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
@@ -1427,31 +1429,32 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
         goto lalr2c_nonterminal_Natom;
     lalr2c_reduce_15:
         {
-    LALR2C_RW_TMP_SEMANTICS = LALR2C_RW_STACK_SEMANTICS (2);
-}
-        LALR2C_E_POP_STACK (3);
-        LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
-        goto lalr2c_nonterminal_Natom;
-    lalr2c_reduce_14:
-        {
     nfa.bind_rune_class (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (1).token.rune_vector, true);
 }
         LALR2C_E_POP_STACK (1);
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Natom;
-    lalr2c_reduce_13:
+    lalr2c_reduce_14:
         LALR2C_E_POP_STACK (1);
+        goto lalr2c_nonterminal_Natom;
+    lalr2c_reduce_13:
+        {
+    nfa.bind_capture (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (2).frag, LALR2C_RW_STACK_SEMANTICS (3).token.uint);
+}
+        LALR2C_E_POP_STACK (3);
+        LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Natom;
     lalr2c_reduce_12:
         {
-    nfa.bind_capture (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (2).frag);
+    LALR2C_RW_TMP_SEMANTICS = LALR2C_RW_STACK_SEMANTICS (2);
 }
         LALR2C_E_POP_STACK (3);
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
         goto lalr2c_nonterminal_Natom;
     lalr2c_reduce_11:
         {
-    nfa.bind_backref (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (1).token.backref);
+    if (!nfa.bind_backref (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (1).token.uint))
+        return false;
 }
         LALR2C_E_POP_STACK (1);
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
@@ -1519,8 +1522,8 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
         goto lalr2c_nonterminal_Nclass_ranges;
     lalr2c_reduce_2:
         {
-    LALR2C_RW_TMP_SEMANTICS.token.rune_vector = allocator.allocate_type<RuneVector> ();
-    new (LALR2C_RW_TMP_SEMANTICS.token.rune_vector) RuneVector (allocator);
+    LALR2C_RW_TMP_SEMANTICS.token.rune_vector = nfa.allocator.allocate_type<RuneVector> ();
+    new (LALR2C_RW_TMP_SEMANTICS.token.rune_vector) RuneVector (nfa.allocator);
 }
         LALR2C_E_POP_STACK (0);
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
@@ -1615,13 +1618,13 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
         {
             case 1:
                 goto lalr2c_state_18;
-            case 12:
-                goto lalr2c_state_21;
             case 4:
+                goto lalr2c_state_21;
+            case 11:
                 goto lalr2c_state_22;
             case 2:
                 goto lalr2c_state_23;
-            case 11:
+            case 12:
                 goto lalr2c_state_26;
             case 24:
                 goto lalr2c_state_43;

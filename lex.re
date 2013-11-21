@@ -8,7 +8,7 @@ bool lex
     ( const char * pattern
     , unsigned int pattern_len
     , TokenArray & tok_arr
-    , slab_allocator<> & allocator
+    , NFA<slab_allocator<> > & nfa
     )
 {
     /*!max:re2c */
@@ -22,6 +22,8 @@ bool lex
     char * YYCURSOR = buffer;
     char * YYMARKER = buffer;
     char * token    = buffer;
+
+    unsigned int captures = 0;
 
 lex_main:
     token    = YYCURSOR;
@@ -45,8 +47,13 @@ lex_main:
         "?"       { savetoken (tok_arr, T_ZERO_ONE);       goto lex_main; }
         "*"       { savetoken (tok_arr, T_ZERO_MANY);      goto lex_main; }
         "+"       { savetoken (tok_arr, T_ONE_MANY);       goto lex_main; }
-        "("       { savetoken (tok_arr, T_LBRACE_CAPTURE); goto lex_main; }
-        "(?:"     { savetoken (tok_arr, T_LBRACE_LAZY);    goto lex_main; }
+        "("
+        {
+            savetoken_uint (tok_arr, T_LBRACE_CAPTURE, captures);
+            ++ captures;
+            goto lex_main;
+        }
+        "(?:"     { savetoken (tok_arr, T_LBRACE_GROUP);   goto lex_main; }
         ")"       { savetoken (tok_arr, T_RBRACE);         goto lex_main; }
         "{"       { goto lex_times; }
 
@@ -99,12 +106,12 @@ lex_main:
         esc_decimal
         {
             const unsigned int n = (unsigned int) atoi (token);
-            savetoken_backref (tok_arr, n);
+            savetoken_uint (tok_arr, T_BACKREF, n);
             goto lex_main;
         }
         esc_class
         {
-            RuneVector * rs = allocator.allocate_type<RuneVector> ();
+            RuneVector * rs = nfa.allocator.allocate_type<RuneVector> ();
             to_rune_class (token, * rs);
             savetoken_rune_vector (tok_arr, rs);
             goto lex_main;
@@ -173,7 +180,7 @@ lex_times:
         [1-9][0-9]* | "0"
         {
             const unsigned int n = atoi (token);
-            savetoken_count (tok_arr, n);
+            savetoken_uint (tok_arr, T_COUNT, n);
             goto lex_times_upper;
         }
         [^] { goto failure; }
@@ -195,7 +202,7 @@ lex_times_upper:
         {
             savetoken (tok_arr, T_COMMA);
             const unsigned int n = atoi (token + 1);
-            savetoken_count (tok_arr, n);
+            savetoken_uint (tok_arr, T_COUNT, n);
             goto lex_main;
         }
         [^] { goto failure; }
@@ -217,7 +224,7 @@ lex_class:
         }
         esc_class
         {
-            RuneVector * rs = allocator.allocate_type<RuneVector> ();
+            RuneVector * rs = nfa.allocator.allocate_type<RuneVector> ();
             to_rune_class (token, * rs);
             savetoken_rune_vector (tok_arr, rs);
             goto lex_class;
@@ -281,6 +288,8 @@ failure:
     return false;
 
 success:
+    nfa.captures = captures;
+
     delete [] buffer;
     return true;
 

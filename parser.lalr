@@ -5,7 +5,7 @@
 #include "debug_parser.h"
 #include "parser.h"
 
-bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_allocator<> & allocator)
+bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa)
 {
     StackSemantics semantics;
 
@@ -39,7 +39,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
 %token    T_DASH
 %token    T_DOT
 %token    T_LBRACE_CAPTURE
-%token    T_LBRACE_LAZY
+%token    T_LBRACE_GROUP
 %token    T_ONE_MANY
 %token    T_RBRACE
 %token    T_RUNE
@@ -55,8 +55,8 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa, slab_all
 
 class_ranges
 : {
-    $$.token.rune_vector = allocator.allocate_type<RuneVector> ();
-    new ($$.token.rune_vector) RuneVector (allocator);
+    $$.token.rune_vector = nfa.allocator.allocate_type<RuneVector> ();
+    new ($$.token.rune_vector) RuneVector (nfa.allocator);
 }
 | class_ranges T_RUNE {
     $1.token.rune_vector->push_back ($2.token.rune);
@@ -106,7 +106,8 @@ atom
     nfa.bind_rune ($$.frag, $1.token.rune);
 }
 | T_BACKREF {
-    nfa.bind_backref ($$.frag, $1.token.backref);
+    if (!nfa.bind_backref ($$.frag, $1.token.uint))
+        return false;
 }
 | T_DOT {
     nfa.bind_any ($$.frag);
@@ -116,9 +117,9 @@ atom
     nfa.bind_rune_class ($$.frag, $1.token.rune_vector, true);
 }
 | T_LBRACE_CAPTURE disjunction T_RBRACE {
-    nfa.bind_capture ($$.frag, $2.frag);
+    nfa.bind_capture ($$.frag, $2.frag, $1.token.uint);
 }
-| T_LBRACE_LAZY disjunction T_RBRACE {
+| T_LBRACE_GROUP disjunction T_RBRACE {
     $$ = $2;
 }
 ;
@@ -168,26 +169,28 @@ term
 
 /* "e{n}"/"e{n}?" */
 | atom T_COUNT {
-    nfa.bind_times_eq ($$.frag, $1.frag, $2.token.count);
+    nfa.bind_times_eq ($$.frag, $1.frag, $2.token.uint);
 }
 | atom T_COUNT T_ZERO_ONE {
-    nfa.bind_times_eq_lazy ($$.frag, $1.frag, $2.token.count);
+    nfa.bind_times_eq ($$.frag, $1.frag, $2.token.uint); // no lazy version
 }
 
 /* "e{n,}"/"e{n,}?" */
 | atom T_COUNT T_COMMA {
-    nfa.bind_times_gteq ($$.frag, $1.frag, $2.token.count);
+    nfa.bind_times_gteq ($$.frag, $1.frag, $2.token.uint);
 }
 | atom T_COUNT T_COMMA T_ZERO_ONE {
-    nfa.bind_times_gteq_lazy ($$.frag, $1.frag, $2.token.count);
+    nfa.bind_times_gteq_lazy ($$.frag, $1.frag, $2.token.uint);
 }
 
 /* "e{n,m}"/"e{n,m}?" */
 | atom T_COUNT T_COMMA T_COUNT {
-    nfa.bind_times_gteq_lteq ($$.frag, $1.frag, $2.token.count, $4.token.count);
+    if (!nfa.bind_times_gteq_lteq ($$.frag, $1.frag, $2.token.uint, $4.token.uint))
+        return false;
 }
 | atom T_COUNT T_COMMA T_COUNT T_ZERO_ONE {
-    nfa.bind_times_gteq_lteq_lazy ($$.frag, $1.frag, $2.token.count, $4.token.count);
+    if (!nfa.bind_times_gteq_lteq_lazy ($$.frag, $1.frag, $2.token.uint, $4.token.uint))
+        return false;
 }
 ;
 

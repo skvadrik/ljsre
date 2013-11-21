@@ -19,17 +19,10 @@ static inline void savetoken_boolean (TokenArray & tok_arr, TokenType t, bool b)
     ++ tok_arr.index;
 }
 
-static inline void savetoken_backref (TokenArray & tok_arr, unsigned int n)
+static inline void savetoken_uint (TokenArray & tok_arr, TokenType t, unsigned int n)
 {
-    tok_arr.start[tok_arr.index].type = T_BACKREF;
-    tok_arr.start[tok_arr.index].value.backref = n;
-    ++ tok_arr.index;
-}
-
-static inline void savetoken_count (TokenArray & tok_arr, unsigned int n)
-{
-    tok_arr.start[tok_arr.index].type = T_COUNT;
-    tok_arr.start[tok_arr.index].value.count = n;
+    tok_arr.start[tok_arr.index].type = t;
+    tok_arr.start[tok_arr.index].value.uint = n;
     ++ tok_arr.index;
 }
 
