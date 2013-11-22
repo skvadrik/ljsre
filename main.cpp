@@ -16,17 +16,21 @@ void print_submatch (Exec & exec)
         {
             const Rune * r1 = exec.submatch->match[2 * i];
             const Rune * r2 = exec.submatch->match[2 * i + 1];
-            char * sub = new char [r2 - r1 + 1];
-            unsigned int j = 0;
-            for (const Rune * r = r1; r < r2; ++r, ++j)
-                sub[j] = * r;
-            sub[r2 - r1] = 0;
-            printf ("%s\n", sub);
-            delete [] sub;
+            if (r1 == NULL)
+                printf ("(nil)\n");
+            else
+            {
+                char * sub = new char [r2 - r1 + 1];
+                unsigned int j = 0;
+                for (const Rune * r = r1; r < r2; ++r, ++j)
+                    sub[j] = * r;
+                sub[r2 - r1] = 0;
+                printf ("%s\n", sub);
+                delete [] sub;
+            }
         }
     }
 }
-
 
 int main (int argc, char ** argv)
 {

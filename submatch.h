@@ -11,13 +11,15 @@ struct Submatch
 
     Submatch (unsigned int n)
         : count (n)
-        , match (static_cast<const Rune **> (operator new (2 * n * sizeof (Rune *))))
+        , match (new const Rune * [2 * n * sizeof (Rune *)])
         , ref   (1)
-    { }
+    {
+        memset (match, 0, 2 * n * sizeof (Rune *));
+    }
 
     explicit Submatch (const Submatch & sm)
         : count (sm.count)
-        , match (static_cast<const Rune **> (operator new (2 * sm.count * sizeof (Rune *))))
+        , match (new const Rune * [2 * sm.count * sizeof (Rune *)])
         , ref   (1)
     {
         memcpy (match, sm.match, 2 * sm.count * sizeof (Rune *));
@@ -25,7 +27,7 @@ struct Submatch
 
     ~Submatch ()
     {
-        operator delete (match);
+        delete [] match;
     }
 
   private:

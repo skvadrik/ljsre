@@ -130,6 +130,16 @@ printf ("bfs match\n");
                     match = true;
                     return true;
                 default:
+printf ("bfs fail\n");
+                    decref (sm);
+                    for ( unsigned int j = i + 1
+                        ; j < clist->size
+                        ; ++ j)
+                        decref (clist->threads[j].submatch);
+                    for ( unsigned int j = 0
+                        ; j < nlist->size
+                        ; ++ j)
+                        decref (nlist->threads[j].submatch);
                     return false;
             }
         }
@@ -138,7 +148,7 @@ printf ("bfs match\n");
         nlist->size = 0;
         clist = l;
     }
-    return true;
+    return match;
 }
 
 bool Exec::dfs (State * s, const Rune * input)
