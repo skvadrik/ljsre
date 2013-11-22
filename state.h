@@ -18,6 +18,7 @@ enum StateType
     , NFA_CAPTURE
     , NFA_EMPTY
     , NFA_MATCH
+    , NFA_NOLAMBDA
     };
 
 struct State
@@ -170,6 +171,17 @@ struct StateEmpty
 
     StateEmpty (State * o)
         : out (o)
+    { }
+};
+
+struct StateNolambda
+{
+    State * out;
+    const Rune * ptr;
+
+    StateNolambda (State * o)
+        : out (o)
+        , ptr (0)
     { }
 };
 

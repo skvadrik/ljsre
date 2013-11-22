@@ -102,3 +102,11 @@ inline void show_match (FILE * f, State * s)
 {
     fprintf (f, "\t\"%p\" [style = bold, label = \"match\"]\n", s);
 }
+
+inline void show_nolambda (FILE * f, std::set<State *> & closed, State * s)
+{
+    StateNolambda * sn = s->to<StateNolambda> ();
+    fprintf (f, "\t\"%p\" [label = \"nolambda\"]\n", s);
+    fprintf (f, "\t\"%p\" -> \"%p\"\n", s, sn->out);
+    show_state (f, closed, sn->out);
+}

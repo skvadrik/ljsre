@@ -5,7 +5,10 @@
 void Exec::add_thread (ThreadList * l, State * s, Submatch * sm, const Rune * input)
 {
     if (s->step == step)
+    {
+        decref (sm);
         return;
+    }
     s->step = step;
     switch (s->type)
     {
@@ -57,6 +60,9 @@ void Exec::add_thread (ThreadList * l, State * s, Submatch * sm, const Rune * in
         case NFA_EMPTY:
             add_thread (l, s->to<StateEmpty> ()->out, sm, input);
             break;
+        case NFA_NOLAMBDA:
+            add_thread (l, s->to<StateNolambda> ()->out, sm, input);
+            break;
         default:
             l->threads[l->size].state = s;
             l->threads[l->size].submatch = sm;
@@ -73,7 +79,8 @@ bool Exec::bfs (State * start, const Rune * input)
     ThreadList * nlist = & nl;
 
     ++ step;
-    add_thread (clist, start, submatch, input);
+    Submatch * sm = new Submatch (captures);
+    add_thread (clist, start, sm, input);
     for (; clist->size > 0; ++ input)
     {
         ++ step;
@@ -110,6 +117,17 @@ bool Exec::bfs (State * start, const Rune * input)
                         decref (sm);
                     break;
                 case NFA_MATCH:
+printf ("bfs match\n");
+                    for ( unsigned int j = i + 1
+                        ; j < clist->size
+                        ; ++ j)
+                        decref (clist->threads[j].submatch);
+                    for ( unsigned int j = 0
+                        ; j < nlist->size
+                        ; ++ j)
+                        decref (nlist->threads[j].submatch);
+                    submatch = sm;
+                    match = true;
                     return true;
                 default:
                     return false;
@@ -117,6 +135,7 @@ bool Exec::bfs (State * start, const Rune * input)
         }
         ThreadList * l = nlist;
         nlist = clist;
+        nlist->size = 0;
         clist = l;
     }
     return true;
@@ -155,8 +174,8 @@ bool Exec::dfs (State * s, const Rune * input)
         }
         case NFA_RUNE:
         {
-printf ("%p\n", input);
             const StateRune * p = s->to<StateRune> ();
+//printf ("%u\n", p->rune);
             return (input != input_end)
                 && (* input == p->rune)
                 && dfs (p->out, input + 1);
@@ -172,11 +191,12 @@ printf ("%p\n", input);
         {
             const StateBackref * p = s->to<StateBackref> ();
             for ( const Rune * i = submatch->match[2 * p->ref]
-                ; input != input_end && i < submatch->match[2 * p->ref + 1]
+                ; i < submatch->match[2 * p->ref + 1]
                 ; ++ input, ++ i
                 )
             {
-                if (* input != * i)
+                if (input == input_end
+                    || * input != * i)
                     return false;
             }
             return dfs (p->out, input);
@@ -200,7 +220,20 @@ printf ("%p\n", input);
         case NFA_EMPTY:
             return dfs (s->to<StateEmpty> ()->out, input);
         case NFA_MATCH:
+printf ("dfs match\n");
+            match = true;
             return true;
+        case NFA_NOLAMBDA:
+        {
+            StateNolambda * p = s->to<StateNolambda> ();
+            if (input > p->ptr)
+            {
+                p->ptr = input;
+                return dfs (p->out, input);
+            }
+            else
+                return false;
+        }
     }
     return true;
 }

@@ -30,5 +30,6 @@ void show_state (FILE * f, std::set<State *> & closed, State * s)
         case NFA_CAPTURE:       show_capture       (f, closed, s); return;
         case NFA_EMPTY:         show_empty         (f, closed, s); return;
         case NFA_MATCH:         show_match         (f, s);         return;
+        case NFA_NOLAMBDA:      show_nolambda      (f, closed, s); return;
     }
 }

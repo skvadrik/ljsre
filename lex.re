@@ -105,8 +105,8 @@ lex_main:
         }
         esc_decimal
         {
-            const unsigned int n = (unsigned int) atoi (token);
-            savetoken_uint (tok_arr, T_BACKREF, n);
+            const unsigned int n = atoi (token + 1);
+            savetoken_uint (tok_arr, T_BACKREF, n - 1);
             goto lex_main;
         }
         esc_class

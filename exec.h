@@ -34,20 +34,23 @@ struct Exec
     Submatch * submatch;
     unsigned int step;
     unsigned int size;
+    unsigned int captures;
+    bool match;
 
     Exec (const Rune * s, unsigned int s_len, unsigned int n, unsigned int sz)
         : input_start (s)
         , input_end   (s + s_len)
-        , submatch    (new Submatch (n))
+        , submatch    (0)
         , step        (0)
         , size        (sz)
-    {
-        incref (submatch);
-    }
+        , captures    (n)
+        , match       (false)
+    { }
 
     ~Exec ()
     {
-        delete submatch;
+        if (submatch != 0)
+            delete submatch;
     }
 
     void add_thread (ThreadList * l, State * s, Submatch * sm, const Rune * input);
