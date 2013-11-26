@@ -118,17 +118,15 @@ bool Exec::bfs (State * start, const Rune * input)
                     break;
                 case NFA_MATCH:
 printf ("bfs match\n");
+                    if (match)
+                        decref (submatch);
+                    match = true;
+                    submatch = sm;
                     for ( unsigned int j = i + 1
                         ; j < clist->size
                         ; ++ j)
                         decref (clist->threads[j].submatch);
-                    for ( unsigned int j = 0
-                        ; j < nlist->size
-                        ; ++ j)
-                        decref (nlist->threads[j].submatch);
-                    submatch = sm;
-                    match = true;
-                    return true;
+                    goto break_for;
                 default:
 printf ("bfs fail\n");
                     decref (sm);
@@ -143,6 +141,7 @@ printf ("bfs fail\n");
                     return false;
             }
         }
+break_for:
         ThreadList * l = nlist;
         nlist = clist;
         nlist->size = 0;
