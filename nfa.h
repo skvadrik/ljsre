@@ -6,7 +6,7 @@
 
 #include "list.h"
 #include "slab_allocator.hh"
-#include "rune.h"
+#include "rune_ranges.h"
 #include "state.h"
 
 //namespace ljsre {
@@ -47,7 +47,7 @@ class NFA
     inline State * save_assert_word     (State * out, bool is_positive);
     inline State * save_assert_follow   (State * out1, State * out2, bool is_positive);
     inline State * save_rune            (State * out, Rune r);
-    inline State * save_rune_class      (State * out, RuneVector * rs, bool is_positive);
+    inline State * save_rune_class      (State * out, RuneRanges * rs);
     inline State * save_backref         (State * out, unsigned int n);
     inline State * save_any             (State * out);
     inline State * save_capture         (State * out, unsigned int n);
@@ -110,7 +110,7 @@ class NFA
     inline void bind_assert_word          (Frag & retf, bool is_positive);
     inline void bind_assert_follow        (Frag & retf, Frag & f, bool is_positive);
     inline void bind_rune                 (Frag & retf, Rune r);
-    inline void bind_rune_class           (Frag & retf, RuneVector * rs, bool is_positive);
+    inline void bind_rune_class           (Frag & retf, RuneRanges * rs);
     inline bool bind_backref              (Frag & retf, unsigned int n);
     inline void bind_any                  (Frag & retf);
     inline void bind_capture              (Frag & retf, Frag & f, unsigned int n);
@@ -199,7 +199,7 @@ State * NFA<Allocator>::copy_state (StateList * out, State * s)
         case NFA_RUNE_CLASS:
         {
             const StateRuneClass * p = s->to<StateRuneClass> ();
-            s_copy = save_rune_class (p->out, p->runes, p->is_positive);
+            s_copy = save_rune_class (p->out, p->runes);
             out->add (&(s_copy->to<StateRuneClass> ()->out));
             break;
         }
@@ -311,13 +311,13 @@ inline State * NFA<Allocator>::save_rune (State * out, Rune r)
 }
 
 template <typename Allocator>
-inline State * NFA<Allocator>::save_rune_class (State * out, RuneVector * rs, bool is_positive)
+inline State * NFA<Allocator>::save_rune_class (State * out, RuneRanges * rs)
 {
     ++ size;
     State * s = alloc_state<StateRuneClass> ();
     s->step = 0;
     s->type = NFA_RUNE_CLASS;
-    new (s->value) StateRuneClass (out, rs, is_positive);
+    new (s->value) StateRuneClass (out, rs);
     return s;
 }
 
@@ -658,10 +658,11 @@ inline void NFA<Allocator>::bind_rune (Frag & retf, Rune r)
 }
 
 template <typename Allocator>
-inline void NFA<Allocator>::bind_rune_class (Frag & retf, RuneVector * rs, bool is_positive)
+inline void NFA<Allocator>::bind_rune_class (Frag & retf, RuneRanges * rs)
 {
-    State * s = save_rune_class (NULL, rs, is_positive);
+    State * s = save_rune_class (NULL, NULL);
     StateList * out = state_list (&(s->to<StateRuneClass> ()->out));
+    delete rs;
 
     retf.save (s, out, false);
 }

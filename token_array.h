@@ -33,10 +33,10 @@ static inline void savetoken_rune (TokenArray & tok_arr, Rune r)
     ++ tok_arr.index;
 }
 
-static inline void savetoken_rune_vector (TokenArray & tok_arr, RuneVector * rs)
+static inline void savetoken_rune_class (TokenArray & tok_arr, RuneRanges * rs)
 {
     tok_arr.start[tok_arr.index].type = T_CLASS;
-    tok_arr.start[tok_arr.index].value.rune_vector = rs;
+    tok_arr.start[tok_arr.index].value.rune_class = rs;
     ++ tok_arr.index;
 }
 

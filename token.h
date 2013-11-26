@@ -2,7 +2,7 @@
 #define __LJS_TOKEN__
 
 #include "token_type.h"
-#include "rune.h"
+#include "rune_ranges.h"
 
 __attribute__((unused)) static const char * token_typenames [] =
 {
@@ -24,7 +24,7 @@ union TokenValue
     bool         boolean;
     unsigned int uint;
     Rune         rune;
-    RuneVector * rune_vector;
+    RuneRanges * rune_class;
 };
 
 struct Token

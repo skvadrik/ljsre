@@ -114,17 +114,14 @@ struct StateRune
 struct StateRuneClass
 {
     State * out;
-    RuneVector * runes;
-    bool is_positive;
+    RuneRanges * runes;
 
     StateRuneClass
         ( State * o
-        , RuneVector * rs
-        , bool p
+        , RuneRanges * rs
         )
-        : out         (o)
-        , runes       (rs)
-        , is_positive (p)
+        : out   (o)
+        , runes (rs)
     { }
 };
 

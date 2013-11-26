@@ -1429,7 +1429,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa)
         goto lalr2c_nonterminal_Natom;
     lalr2c_reduce_15:
         {
-    nfa.bind_rune_class (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (1).token.rune_vector, true);
+    nfa.bind_rune_class (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (1).token.rune_class);
 }
         LALR2C_E_POP_STACK (1);
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
@@ -1468,7 +1468,10 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa)
         goto lalr2c_nonterminal_Natom;
     lalr2c_reduce_9:
         {
-    nfa.bind_rune_class (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (2).token.rune_vector, LALR2C_RW_STACK_SEMANTICS (3).token.boolean);
+    normalize_ranges (LALR2C_RW_STACK_SEMANTICS (2).token.rune_class);
+    if (!LALR2C_RW_STACK_SEMANTICS (3).token.boolean)
+        negate_ranges (LALR2C_RW_STACK_SEMANTICS (2).token.rune_class);
+    nfa.bind_rune_class (LALR2C_RW_TMP_SEMANTICS.frag, LALR2C_RW_STACK_SEMANTICS (2).token.rune_class);
 }
         LALR2C_E_POP_STACK (3);
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
@@ -1476,7 +1479,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa)
     lalr2c_reduce_8:
         {
     const Rune r = '-';
-    LALR2C_RW_STACK_SEMANTICS (1).token.rune_vector->push_back (r);
+    add_range (LALR2C_RW_STACK_SEMANTICS (1).token.rune_class, r, r);
     LALR2C_RW_TMP_SEMANTICS = LALR2C_RW_STACK_SEMANTICS (1);
 }
         LALR2C_E_POP_STACK (2);
@@ -1485,7 +1488,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa)
     lalr2c_reduce_7:
         {
     const Rune r = '-';
-    LALR2C_RW_STACK_SEMANTICS (2).token.rune_vector->push_back (r);
+    add_range (LALR2C_RW_STACK_SEMANTICS (2).token.rune_class, r, r);
     LALR2C_RW_TMP_SEMANTICS = LALR2C_RW_STACK_SEMANTICS (2);
 }
         LALR2C_E_POP_STACK (3);
@@ -1494,7 +1497,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa)
     lalr2c_reduce_6:
         {
     const Rune r = '-';
-    LALR2C_RW_STACK_SEMANTICS (2).token.rune_vector->push_back (r);
+    add_range (LALR2C_RW_STACK_SEMANTICS (2).token.rune_class, r, r);
     LALR2C_RW_TMP_SEMANTICS = LALR2C_RW_STACK_SEMANTICS (2);
 }
         LALR2C_E_POP_STACK (2);
@@ -1505,7 +1508,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa)
         goto lalr2c_nonterminal_Nclass_body;
     lalr2c_reduce_4:
         {
-    LALR2C_RW_STACK_SEMANTICS (2).token.rune_vector->push_back (LALR2C_RW_STACK_SEMANTICS (1).token.rune);
+    add_range (LALR2C_RW_STACK_SEMANTICS (2).token.rune_class, LALR2C_RW_STACK_SEMANTICS (1).token.rune, LALR2C_RW_STACK_SEMANTICS (1).token.rune);
     LALR2C_RW_TMP_SEMANTICS = LALR2C_RW_STACK_SEMANTICS (2);
 }
         LALR2C_E_POP_STACK (2);
@@ -1513,8 +1516,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa)
         goto lalr2c_nonterminal_Nclass_ranges;
     lalr2c_reduce_3:
         {
-    for (unsigned int i = 0; i < LALR2C_RW_STACK_SEMANTICS (1).token.rune_vector->size (); ++i)
-        LALR2C_RW_STACK_SEMANTICS (2).token.rune_vector->push_back ((* LALR2C_RW_STACK_SEMANTICS (1).token.rune_vector)[i]);
+    unite_ranges (LALR2C_RW_STACK_SEMANTICS (2).token.rune_class, LALR2C_RW_STACK_SEMANTICS (1).token.rune_class);
     LALR2C_RW_TMP_SEMANTICS = LALR2C_RW_STACK_SEMANTICS (2);
 }
         LALR2C_E_POP_STACK (2);
@@ -1522,8 +1524,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa)
         goto lalr2c_nonterminal_Nclass_ranges;
     lalr2c_reduce_2:
         {
-    LALR2C_RW_TMP_SEMANTICS.token.rune_vector = nfa.allocator.allocate_type<RuneVector> ();
-    new (LALR2C_RW_TMP_SEMANTICS.token.rune_vector) RuneVector (nfa.allocator);
+    LALR2C_RW_TMP_SEMANTICS.token.rune_class = new RuneRanges;
 }
         LALR2C_E_POP_STACK (0);
         LALR2C_RW_STACK_SEMANTICS (0) = LALR2C_RW_TMP_SEMANTICS;
@@ -1532,8 +1533,7 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa)
         {
     const Rune r1 = LALR2C_RW_STACK_SEMANTICS (3).token.rune;
     const Rune r2 = LALR2C_RW_STACK_SEMANTICS (1).token.rune;
-    const Rune r = r2 << 16 | r1;
-    LALR2C_RW_STACK_SEMANTICS (4).token.rune_vector->push_back (r);
+    add_range (LALR2C_RW_STACK_SEMANTICS (4).token.rune_class, r1, r2);
     LALR2C_RW_TMP_SEMANTICS = LALR2C_RW_STACK_SEMANTICS (4);
 }
         LALR2C_E_POP_STACK (4);

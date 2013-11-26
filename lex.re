@@ -111,9 +111,9 @@ lex_main:
         }
         esc_class
         {
-            RuneVector * rs = nfa.allocator.allocate_type<RuneVector> ();
+            RuneRanges * rs = new RuneRanges;
             to_rune_class (token, * rs);
-            savetoken_rune_vector (tok_arr, rs);
+            savetoken_rune_class (tok_arr, rs);
             goto lex_main;
         }
         esc_null
@@ -224,9 +224,9 @@ lex_class:
         }
         esc_class
         {
-            RuneVector * rs = nfa.allocator.allocate_type<RuneVector> ();
+            RuneRanges * rs = new RuneRanges;
             to_rune_class (token, * rs);
-            savetoken_rune_vector (tok_arr, rs);
+            savetoken_rune_class (tok_arr, rs);
             goto lex_class;
         }
         "\\b"

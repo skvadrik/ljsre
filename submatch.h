@@ -1,6 +1,8 @@
 #ifndef __LJSRE_SUBMATCH__
 #define __LJSRE_SUBMATCH__
 
+#include <string.h>
+
 #include "rune.h"
 
 struct Submatch

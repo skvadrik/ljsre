@@ -61,7 +61,7 @@ inline void show_rune (FILE * f, std::set<State *> & closed, State * s)
 inline void show_rune_class (FILE * f, std::set<State *> & closed, State * s)
 {
     StateRuneClass * sr = s->to<StateRuneClass> ();
-    fprintf (f, "\t\"%p\" [label = \"rune, %u\"]\n", s, sr->is_positive);
+    fprintf (f, "\t\"%p\" [label = \"rune_class\"]\n", s);
     fprintf (f, "\t\"%p\" -> \"%p\"\n", s, sr->out);
     show_state (f, closed, sr->out);
 }

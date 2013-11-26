@@ -55,23 +55,20 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa)
 
 class_ranges
 : {
-    $$.token.rune_vector = nfa.allocator.allocate_type<RuneVector> ();
-    new ($$.token.rune_vector) RuneVector (nfa.allocator);
+    $$.token.rune_class = new RuneRanges;
 }
 | class_ranges T_RUNE {
-    $1.token.rune_vector->push_back ($2.token.rune);
+    add_range ($1.token.rune_class, $2.token.rune, $2.token.rune);
     $$ = $1;
 }
 | class_ranges T_CLASS {
-    for (unsigned int i = 0; i < $2.token.rune_vector->size (); ++i)
-        $1.token.rune_vector->push_back ((* $2.token.rune_vector)[i]);
+    unite_ranges ($1.token.rune_class, $2.token.rune_class);
     $$ = $1;
 }
 | class_ranges T_RUNE T_DASH T_RUNE {
     const Rune r1 = $2.token.rune;
     const Rune r2 = $4.token.rune;
-    const Rune r = r2 << 16 | r1;
-    $1.token.rune_vector->push_back (r);
+    add_range ($1.token.rune_class, r1, r2);
     $$ = $1;
 }
 ;
@@ -80,24 +77,27 @@ class_body
 : class_ranges    /* empty */
 | class_ranges T_DASH {
     const Rune r = '-';
-    $1.token.rune_vector->push_back (r);
+    add_range ($1.token.rune_class, r, r);
     $$ = $1;
 }
 | T_DASH class_ranges {
     const Rune r = '-';
-    $2.token.rune_vector->push_back (r);
+    add_range ($2.token.rune_class, r, r);
     $$ = $2;
 }
 | T_DASH class_ranges T_DASH {
     const Rune r = '-';
-    $2.token.rune_vector->push_back (r);
+    add_range ($2.token.rune_class, r, r);
     $$ = $2;
 }
 ;
 
 class
 : T_CLASS_START class_body T_CLASS_END {
-    nfa.bind_rune_class ($$.frag, $2.token.rune_vector, $1.token.boolean);
+    normalize_ranges ($2.token.rune_class);
+    if (!$1.token.boolean)
+        negate_ranges ($2.token.rune_class);
+    nfa.bind_rune_class ($$.frag, $2.token.rune_class);
 }
 ;
 
@@ -114,7 +114,7 @@ atom
 }
 | class /* empty */
 | T_CLASS {
-    nfa.bind_rune_class ($$.frag, $1.token.rune_vector, true);
+    nfa.bind_rune_class ($$.frag, $1.token.rune_class);
 }
 | T_LBRACE_CAPTURE disjunction T_RBRACE {
     nfa.bind_capture ($$.frag, $2.frag, $1.token.uint);
