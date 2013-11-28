@@ -2,7 +2,7 @@
 
 #include "exec.h"
 
-void Exec::add_thread (ThreadList * l, State * s, Submatch * sm, const Rune * input)
+void Exec::add_thread (ThreadList * l, State * s, Submatch * sm, const unsigned char * input)
 {
     if (s->step == step)
     {
@@ -71,7 +71,7 @@ void Exec::add_thread (ThreadList * l, State * s, Submatch * sm, const Rune * in
     }
 }
 
-bool Exec::bfs (State * start, const Rune * input)
+bool Exec::bfs (State * start, const unsigned char * input)
 {
     ThreadList cl (size);
     ThreadList nl (size);
@@ -90,21 +90,22 @@ bool Exec::bfs (State * start, const Rune * input)
             Submatch * sm = clist->threads[i].submatch;
             switch (s->type)
             {
-                case NFA_RUNE:
+                case NFA_BYTE:
                 {
-                    const StateRune * p = s->to<StateRune> ();
+                    const StateByte * p = s->to<StateByte> ();
                     if (input != input_end
-                        && * input == p->rune)
+                        && * input == p->byte)
                         add_thread (nlist, p->out, sm, input + 1);
                     else
                         decref (sm);
                     break;
                 }
-                case NFA_RUNE_CLASS:
+                case NFA_BYTE_RANGE:
                 {
-                    const StateRuneClass * p = s->to<StateRuneClass> ();
+                    const StateByteRange * p = s->to<StateByteRange> ();
                     if (input != input_end
-                        && member (* input, p->runes))
+                        && * input >= p->byte_lo
+                        && * input <= p->byte_hi)
                         add_thread (nlist, p->out, sm, input + 1);
                     else
                         decref (sm);
@@ -150,7 +151,7 @@ break_for:
     return match;
 }
 
-bool Exec::dfs (State * s, const Rune * input)
+bool Exec::dfs (State * s, const unsigned char * input)
 {
     switch (s->type)
     {
@@ -181,25 +182,26 @@ bool Exec::dfs (State * s, const Rune * input)
             return (!p->is_positive ^ is_followed_by)
                 && dfs (p->out2, input);
         }
-        case NFA_RUNE:
+        case NFA_BYTE:
         {
-            const StateRune * p = s->to<StateRune> ();
+            const StateByte * p = s->to<StateByte> ();
 //printf ("%u\n", p->rune);
             return (input != input_end)
-                && (* input == p->rune)
+                && (* input == p->byte)
                 && dfs (p->out, input + 1);
         }
-        case NFA_RUNE_CLASS:
+        case NFA_BYTE_RANGE:
         {
-            const StateRuneClass * p = s->to<StateRuneClass> ();
-            return (input != input_end)
-                && (member (* input, p->runes))
+            const StateByteRange * p = s->to<StateByteRange> ();
+            return input != input_end
+                && * input >= p->byte_lo
+                && * input <= p->byte_hi
                 && dfs (p->out, input + 1);
         }
         case NFA_BACKREF:
         {
             const StateBackref * p = s->to<StateBackref> ();
-            for ( const Rune * i = submatch->match[2 * p->ref]
+            for ( const unsigned char * i = submatch->match[2 * p->ref]
                 ; i < submatch->match[2 * p->ref + 1]
                 ; ++ input, ++ i
                 )
@@ -216,7 +218,7 @@ bool Exec::dfs (State * s, const Rune * input)
         case NFA_CAPTURE:
         {
             const StateCapture * p = s->to<StateCapture> ();
-            const Rune * old = submatch->match[p->sub];
+            const unsigned char * old = submatch->match[p->sub];
             submatch->match[p->sub] = input;
             if (dfs (p->out, input))
                 return true;

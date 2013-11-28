@@ -1,8 +1,6 @@
 #ifndef __LJSRE_STATE__
 #define __LJSRE_STATE__
 
-#include "rune.h"
-
 //namespace ljsre {
 
 enum StateType
@@ -11,8 +9,8 @@ enum StateType
     , NFA_ASSERT_END
     , NFA_ASSERT_WORD
     , NFA_ASSERT_FOLLOW
-    , NFA_RUNE
-    , NFA_RUNE_CLASS
+    , NFA_BYTE
+    , NFA_BYTE_RANGE
     , NFA_BACKREF
     , NFA_ANY
     , NFA_CAPTURE
@@ -97,31 +95,34 @@ struct StateAssertFollow
     { }
 };
 
-struct StateRune
+struct StateByte
 {
     State * out;
-    Rune rune;
+    unsigned char byte;
 
-    StateRune
+    StateByte
         ( State * o
-        , Rune r
+        , unsigned char c
         )
         : out  (o)
-        , rune (r)
+        , byte (c)
     { }
 };
 
-struct StateRuneClass
+struct StateByteRange
 {
     State * out;
-    RuneRanges * runes;
+    unsigned char byte_lo;
+    unsigned char byte_hi;
 
-    StateRuneClass
+    StateByteRange
         ( State * o
-        , RuneRanges * rs
+        , unsigned char lo
+        , unsigned char hi
         )
-        : out   (o)
-        , runes (rs)
+        : out     (o)
+        , byte_lo (lo)
+        , byte_hi (hi)
     { }
 };
 
@@ -174,7 +175,7 @@ struct StateEmpty
 struct StateNolambda
 {
     State * out;
-    const Rune * ptr;
+    const unsigned char * ptr;
 
     StateNolambda (State * o)
         : out (o)

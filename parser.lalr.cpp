@@ -1533,7 +1533,8 @@ bool Parser::parse (TokenArray & tok_arr, NFA<slab_allocator<> > & nfa)
         {
     const Rune r1 = LALR2C_RW_STACK_SEMANTICS (3).token.rune;
     const Rune r2 = LALR2C_RW_STACK_SEMANTICS (1).token.rune;
-    add_range (LALR2C_RW_STACK_SEMANTICS (4).token.rune_class, r1, r2);
+    if (!add_range (LALR2C_RW_STACK_SEMANTICS (4).token.rune_class, r1, r2))
+        return false;
     LALR2C_RW_TMP_SEMANTICS = LALR2C_RW_STACK_SEMANTICS (4);
 }
         LALR2C_E_POP_STACK (4);

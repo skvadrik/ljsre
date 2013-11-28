@@ -68,7 +68,8 @@ class_ranges
 | class_ranges T_RUNE T_DASH T_RUNE {
     const Rune r1 = $2.token.rune;
     const Rune r2 = $4.token.rune;
-    add_range ($1.token.rune_class, r1, r2);
+    if (!add_range ($1.token.rune_class, r1, r2))
+        return false;
     $$ = $1;
 }
 ;

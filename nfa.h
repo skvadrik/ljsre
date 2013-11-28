@@ -46,8 +46,8 @@ class NFA
     inline State * save_assert_end      (State * out);
     inline State * save_assert_word     (State * out, bool is_positive);
     inline State * save_assert_follow   (State * out1, State * out2, bool is_positive);
-    inline State * save_rune            (State * out, Rune r);
-    inline State * save_rune_class      (State * out, RuneRanges * rs);
+    inline State * save_byte            (State * out, unsigned char byte);
+    inline State * save_byte_range      (State * out, unsigned char byte_lo, unsigned char byte_hi);
     inline State * save_backref         (State * out, unsigned int n);
     inline State * save_any             (State * out);
     inline State * save_capture         (State * out, unsigned int n);
@@ -110,6 +110,8 @@ class NFA
     inline void bind_assert_word          (Frag & retf, bool is_positive);
     inline void bind_assert_follow        (Frag & retf, Frag & f, bool is_positive);
     inline void bind_rune                 (Frag & retf, Rune r);
+    inline void bind_rune_subrange        (Frag & retf, const char * cl, const char * ch, unsigned int n);
+    inline void bind_rune_range           (Frag & retf, Rune l, Rune h);
     inline void bind_rune_class           (Frag & retf, RuneRanges * rs);
     inline bool bind_backref              (Frag & retf, unsigned int n);
     inline void bind_any                  (Frag & retf);
@@ -189,18 +191,18 @@ State * NFA<Allocator>::copy_state (StateList * out, State * s)
             out->add (&(q->out2));
             break;
         }
-        case NFA_RUNE:
+        case NFA_BYTE:
         {
-            const StateRune * p = s->to<StateRune> ();
-            s_copy = save_rune (p->out, p->rune);
-            out->add (&(s_copy->to<StateRune> ()->out));
+            const StateByte * p = s->to<StateByte> ();
+            s_copy = save_byte (p->out, p->byte);
+            out->add (&(s_copy->to<StateByte> ()->out));
             break;
         }
-        case NFA_RUNE_CLASS:
+        case NFA_BYTE_RANGE:
         {
-            const StateRuneClass * p = s->to<StateRuneClass> ();
-            s_copy = save_rune_class (p->out, p->runes);
-            out->add (&(s_copy->to<StateRuneClass> ()->out));
+            const StateByteRange * p = s->to<StateByteRange> ();
+            s_copy = save_byte_range (p->out, p->byte_lo, p->byte_hi);
+            out->add (&(s_copy->to<StateByteRange> ()->out));
             break;
         }
         case NFA_BACKREF:
@@ -300,24 +302,24 @@ inline State * NFA<Allocator>::save_assert_follow (State * out1, State * out2, b
 }
 
 template <typename Allocator>
-inline State * NFA<Allocator>::save_rune (State * out, Rune r)
+inline State * NFA<Allocator>::save_byte (State * out, unsigned char byte)
 {
     ++ size;
-    State * s = alloc_state<StateRune> ();
+    State * s = alloc_state<StateByte> ();
     s->step = 0;
-    s->type = NFA_RUNE;
-    new (s->value) StateRune (out, r);
+    s->type = NFA_BYTE;
+    new (s->value) StateByte (out, byte);
     return s;
 }
 
 template <typename Allocator>
-inline State * NFA<Allocator>::save_rune_class (State * out, RuneRanges * rs)
+inline State * NFA<Allocator>::save_byte_range (State * out, unsigned char byte_lo, unsigned char byte_hi)
 {
     ++ size;
-    State * s = alloc_state<StateRuneClass> ();
+    State * s = alloc_state<StateByteRange> ();
     s->step = 0;
-    s->type = NFA_RUNE_CLASS;
-    new (s->value) StateRuneClass (out, rs);
+    s->type = NFA_BYTE_RANGE;
+    new (s->value) StateByteRange (out, byte_lo, byte_hi);
     return s;
 }
 
@@ -651,20 +653,105 @@ inline void NFA<Allocator>::bind_assert_follow (Frag & retf, Frag & f, bool is_p
 template <typename Allocator>
 inline void NFA<Allocator>::bind_rune (Frag & retf, Rune r)
 {
-    State * s = save_rune (NULL, r);
-    StateList * out = state_list (&(s->to<StateRune> ()->out));
+    char bytes [UTFmax];
+    const int bytes_count = runetochar (bytes, &r);
+    State * s = save_byte (NULL, bytes[bytes_count - 1]);
+    StateList * out = state_list (&(s->to<StateByte> ()->out));
+    for (int i = bytes_count - 2; i >= 0; --i)
+        s = save_byte (s, r);
 
     retf.save (s, out, false);
 }
 
 template <typename Allocator>
+inline void NFA<Allocator>::bind_rune_subrange (Frag & retf, const char * cl, const char * ch, unsigned int n)
+{
+    int i = n - 1;
+    State * s = NULL;
+    StateList * out = NULL;
+fprintf (stderr, "n = %u\n", n);
+    if (cl[i] == ch[i])
+    {
+        s = save_byte (s, cl[i]);
+        out = state_list (&(s->to<StateByte> ()->out));
+    }
+    else
+    {
+        s = save_byte_range (s, cl[i], ch[i]);
+        out = state_list (&(s->to<StateByteRange> ()->out));
+    }
+    for (--i; i >= 0; --i)
+    {
+        s = cl[i] == ch[i]
+            ? save_byte (s, cl[i])
+            : save_byte_range (s, cl[i], ch[i]);
+    }
+    retf.save (s, out, false);
+}
+
+template <typename Allocator>
+inline void NFA<Allocator>::bind_rune_range (Frag & retf, Rune l, Rune h)
+{
+    char cl [UTFmax];
+    const int nl = runetochar (cl, &l);
+    char ch [UTFmax];
+    const int nh = runetochar (ch, &h);
+
+    unsigned int lo = 0;
+    while (lo < RUNE_BOUNDS - 1 && l > rune_bounds[lo])
+        ++ lo;
+
+    unsigned int hi = RUNE_BOUNDS - 1;
+    while (hi > 0 && h < rune_bounds[hi])
+        -- hi;
+
+    if (lo < hi)
+    {
+        Frag f1;
+        bind_rune_subrange (f1, cl, runetochar_max[lo], nl);
+
+        Frag f11 = f1;
+        for (int n = lo + 1; n < hi; ++ n)
+        {
+            Frag f2;
+            bind_rune_subrange (f2, runetochar_min[n], runetochar_max[n], rune_len[n]);
+            Frag f3;
+            bind_alt (f3, f11, f2);
+            f11 = f3;
+        }
+
+        Frag f2;
+        bind_rune_subrange (f2, runetochar_min[hi], ch, nh);
+        bind_alt (retf, f1, f2);
+    }
+    else
+        bind_rune_subrange (retf, cl, ch, nl);
+}
+
+template <typename Allocator>
 inline void NFA<Allocator>::bind_rune_class (Frag & retf, RuneRanges * rs)
 {
-    State * s = save_rune_class (NULL, NULL);
-    StateList * out = state_list (&(s->to<StateRuneClass> ()->out));
+for (RuneRanges::iterator it = rs->begin (); it != rs->end ();  ++it)
+    fprintf (stderr, "* %i - %i\n", it->first, it->second);
+    RuneRanges::iterator i = rs->begin ();
+    if (i == rs->end ())
+        bind_empty (retf);
+    else
+    {
+        Frag f1;
+        bind_rune_range (f1, i->first, i->second);
+        StateList * const out = f1.out;
+        for (++i; i != rs->end (); ++i)
+        {
+            Frag f2;
+            bind_rune_range (f2, i->first, i->second);
+            Frag f3;
+            bind_alt (f3, f1, f2);
+            f1 = f3;
+        }
+        retf.save (f1.start, out, false);
+    }
     delete rs;
-
-    retf.save (s, out, false);
 }
 
 template <typename Allocator>

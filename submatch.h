@@ -8,12 +8,12 @@
 struct Submatch
 {
     const unsigned int count;
-    const Rune ** match;
+    const unsigned char ** match;
     unsigned int ref;
 
     Submatch (unsigned int n)
         : count (n)
-        , match (new const Rune * [2 * n * sizeof (Rune *)])
+        , match (new const unsigned char * [2 * n * sizeof (unsigned char *)])
         , ref   (1)
     {
         memset (match, 0, 2 * n * sizeof (Rune *));
@@ -21,10 +21,10 @@ struct Submatch
 
     explicit Submatch (const Submatch & sm)
         : count (sm.count)
-        , match (new const Rune * [2 * sm.count * sizeof (Rune *)])
+        , match (new const unsigned char * [2 * sm.count * sizeof (unsigned char *)])
         , ref   (1)
     {
-        memcpy (match, sm.match, 2 * sm.count * sizeof (Rune *));
+        memcpy (match, sm.match, 2 * sm.count * sizeof (unsigned char *));
     }
 
     ~Submatch ()
@@ -52,7 +52,7 @@ static inline void decref (Submatch * sm)
 static inline Submatch * update
     ( Submatch * sm
     , unsigned int i
-    , const Rune * r
+    , const unsigned char * r
     )
 {
     Submatch * sm_new = sm;

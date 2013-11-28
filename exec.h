@@ -29,15 +29,15 @@ struct ThreadList
 
 struct Exec
 {
-    const Rune * const input_start;
-    const Rune * const input_end;
+    const unsigned char * const input_start;
+    const unsigned char * const input_end;
     Submatch * submatch;
     unsigned int step;
     unsigned int size;
     unsigned int captures;
     bool match;
 
-    Exec (const Rune * s, unsigned int s_len, unsigned int n, unsigned int sz)
+    Exec (const unsigned char * s, unsigned int s_len, unsigned int n, unsigned int sz)
         : input_start (s)
         , input_end   (s + s_len)
         , submatch    (0)
@@ -53,9 +53,9 @@ struct Exec
             delete submatch;
     }
 
-    void add_thread (ThreadList * l, State * s, Submatch * sm, const Rune * input);
-    bool bfs (State * start, const Rune * input);
-    bool dfs (State * s, const Rune * input);
+    void add_thread (ThreadList * l, State * s, Submatch * sm, const unsigned char * input);
+    bool bfs (State * start, const unsigned char * input);
+    bool dfs (State * s, const unsigned char * input);
 
   private:
     Exec (const Exec &);

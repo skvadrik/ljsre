@@ -50,18 +50,18 @@ inline void show_assert_follow (FILE * f, std::set<State *> & closed, State * s)
     show_state (f, closed, sa->out2);
 }
 
-inline void show_rune (FILE * f, std::set<State *> & closed, State * s)
+inline void show_byte (FILE * f, std::set<State *> & closed, State * s)
 {
-    StateRune * sr = s->to<StateRune> ();
-    fprintf (f, "\t\"%p\" [label = \"rune, %u\"]\n", s, sr->rune);
+    StateByte * sr = s->to<StateByte> ();
+    fprintf (f, "\t\"%p\" [label = \"byte, %c\"]\n", s, sr->byte);
     fprintf (f, "\t\"%p\" -> \"%p\"\n", s, sr->out);
     show_state (f, closed, sr->out);
 }
 
-inline void show_rune_class (FILE * f, std::set<State *> & closed, State * s)
+inline void show_byte_range (FILE * f, std::set<State *> & closed, State * s)
 {
-    StateRuneClass * sr = s->to<StateRuneClass> ();
-    fprintf (f, "\t\"%p\" [label = \"rune_class\"]\n", s);
+    StateByteRange * sr = s->to<StateByteRange> ();
+    fprintf (f, "\t\"%p\" [label = \"byte_range\"]\n", s);
     fprintf (f, "\t\"%p\" -> \"%p\"\n", s, sr->out);
     show_state (f, closed, sr->out);
 }

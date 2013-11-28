@@ -14,15 +14,15 @@ void print_submatch (Exec & exec)
         printf ("submatches: %u\n", exec.submatch->count);
         for (unsigned int i = 0; i < exec.submatch->count; ++i)
         {
-            const Rune * r1 = exec.submatch->match[2 * i];
-            const Rune * r2 = exec.submatch->match[2 * i + 1];
+            const unsigned char * r1 = exec.submatch->match[2 * i];
+            const unsigned char * r2 = exec.submatch->match[2 * i + 1];
             if (r1 == NULL)
                 printf ("(nil)\n");
             else
             {
                 char * sub = new char [r2 - r1 + 1];
                 unsigned int j = 0;
-                for (const Rune * r = r1; r < r2; ++r, ++j)
+                for (const unsigned char * r = r1; r < r2; ++r, ++j)
                     sub[j] = * r;
                 sub[r2 - r1] = 0;
                 printf ("%s\n", sub);
@@ -58,9 +58,7 @@ int main (int argc, char ** argv)
     nfa_to_dot ("nfa.dot", nfa);
 
     const unsigned int s_len = strlen (argv[2]);
-    Rune * s = new Rune [s_len];
-    for (unsigned int i = 0; i < s_len; ++i)
-        s[i] = argv[2][i];
+    const unsigned char * s = (const unsigned char *) argv[2];
 
 #if 1
     Exec exec1 (s, s_len, nfa.captures, nfa.size);
@@ -77,6 +75,5 @@ int main (int argc, char ** argv)
     print_submatch (exec2);
 #endif
 
-    delete [] s;
     return 0;
 }
